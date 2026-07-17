@@ -1,6 +1,6 @@
 # 1-Click Resizer — Premiere Pro Panel
 
-**Repo:** https://github.com/tungnguyen1202/1-click-resizer (private)
+**Repo:** https://github.com/tungnguyen1202/1-click-resizer (public)
 
 
 A CEP panel that turns the active sequence into the other two aspect ratios of
@@ -61,39 +61,26 @@ then offers the update on next open.
 
 ## Install (macOS) — for teammates
 
-**Bước 0 (một lần, cần maintainer):** repo này **private** — nhờ maintainer
-(tung.thanhnguyen@crossian.com) mời tài khoản GitHub của bạn làm collaborator,
-rồi bấm chấp nhận lời mời trong email.
+### Cách 1 — Bộ cài 1 click (dễ nhất, không cần Terminal)
 
-**Bước 1 — đăng nhập GitHub** (một lần):
-```bash
-brew install gh && gh auth login
-```
-Chọn: **GitHub.com → HTTPS → Login with a web browser**. (Chưa có Homebrew?
-Cài từ https://brew.sh, hoặc tải gh installer tại https://cli.github.com.)
+1. Tải về: **https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip**
+2. Giải nén → **chuột phải** vào **"Cài đặt 1-Click Resizer"** → **Open** → **Open**
+   *(lần đầu macOS cảnh báo vì app chưa ký — chuột phải → Open là cách mở)*
+3. Thấy hộp thoại ✅ → thoát hẳn Premiere (Cmd+Q) → mở lại →
+   **Window → Extensions → 1-Click Resizer**
 
-**Bước 2 — tải về và cài (dán nguyên khối):**
-```bash
-gh repo clone tungnguyen1202/1-click-resizer "$HOME/Dev/1-click-resizer" && "$HOME/Dev/1-click-resizer/install.sh"
-```
-`install.sh` tự bật PlayerDebugMode và liên kết panel vào Premiere.
-
-**Bước 3:** Thoát hẳn Premiere (Cmd+Q) → mở lại → **Window → Extensions →
-1-Click Resizer**. Xong — từ đây mọi bản mới sẽ tự hiện nút **↑ Cập nhật**
-ngay trong panel.
+Xong. Từ đây mọi bản mới sẽ tự hiện nút **↑ Cập nhật** ngay trong panel —
+không bao giờ phải cài lại. (Auto-update cần `git` — máy đã cài Xcode Command
+Line Tools là có sẵn; nếu chưa có, panel vẫn chạy bình thường, chỉ không tự
+cập nhật.)
 
 <details>
-<summary>Cài tay (không dùng install.sh)</summary>
+<summary>Cách 2 — Cài bằng git (cho dev)</summary>
 
 ```bash
-defaults write com.adobe.CSXS.9 PlayerDebugMode 1
-defaults write com.adobe.CSXS.10 PlayerDebugMode 1
-defaults write com.adobe.CSXS.11 PlayerDebugMode 1
-defaults write com.adobe.CSXS.12 PlayerDebugMode 1
-mkdir -p "$HOME/Library/Application Support/Adobe/CEP/extensions"
-ln -sfn "$HOME/Dev/1-click-resizer/com.oneclickresize.panel" \
-  "$HOME/Library/Application Support/Adobe/CEP/extensions/com.oneclickresize.panel"
+git clone https://github.com/tungnguyen1202/1-click-resizer.git "$HOME/Dev/1-click-resizer" && "$HOME/Dev/1-click-resizer/install.sh"
 ```
+Rồi thoát hẳn Premiere và mở lại.
 </details>
 
 ## Updating (get the latest version)
