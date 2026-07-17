@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>1-Click Resizer</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel" role="region" aria-label="1-Click Resizer panel">
+
+      <div id="update-bar" class="update-bar" style="display:none" role="status">
+        <span class="ub-text"></span>
+        <div class="ub-actions">
+          <button type="button" id="ub-update" class="ub-btn">↑ Cập nhật</button>
+          <button type="button" id="ub-dismiss" class="ub-x" aria-label="Đóng">✕</button>
+        </div>
+      </div>
+
+      <div id="main-view">
+        <div class="top">
+          <div class="brand">
+            <span class="spark" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg>
+            </span>
+            1-CLICK RESIZER
+          </div>
+          <div class="ver">RSZ-A17F<br><b>V1.3.1</b></div>
+        </div>
+
+        <div class="pills">
+          <span id="pill-engine" class="pill wait" title="Kết nối tới script engine của Premiere"><span class="dot"></span>ENGINE …</span>
+          <span id="pill-seq" class="pill rec"><span class="dot"></span>NO SEQUENCE</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="sect">
+          <p class="label">Nguồn nhận diện</p>
+          <div class="source">
+            <div class="rt">
+              <span class="ratiobox" aria-hidden="true"></span>
+              <div class="meta"><b>—</b><span>mở một sequence để bắt đầu</span></div>
+            </div>
+            <div class="srcright">
+              <button id="refresh" class="iconbtn" type="button" title="Làm mới nhận diện" aria-label="Làm mới nhận diện">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              </button>
+              <button type="button" id="auto-toggle" class="autobadge" title="Tự nhận diện realtime — bấm để bật/tắt">AUTO</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="btnwrap">
+          <div class="tooltip">TẠO CÁC RATIO CÒN LẠI · DUPLICATE + REPOSITION</div>
+          <button class="resize" id="go">RESIZE
+            <span class="sub">tạo tất cả ratio còn lại</span>
+          </button>
+        </div>
+
+        <div class="outputs" id="outs">
+          <p class="hint">nhấn RESIZE để sinh các phiên bản</p>
+        </div>
+        <div id="status-msg" class="hint" role="status" aria-live="polite"></div>
+
+        <div class="foot">
+          <div class="tools">
+            <span class="tbtn" id="gear" title="Cài đặt" aria-label="Cài đặt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          </div>
+          <span class="ai" id="foot-status"><span class="dot"></span>READY</span>
+        </div>
+      </div>
+
+      <div id="settings" class="view-settings">
+        <div class="settings-head">
+          <button type="button" id="settings-back" class="iconbtn" title="Quay lại" aria-label="Quay lại">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <span class="label" style="margin:0">Cài đặt</span>
+        </div>
+
+        <div class="srow">
+          <label class="slabel" for="bgtrack">Track nền (V…)</label>
+          <input type="number" id="bgtrack" min="1" max="20" step="1" value="1" aria-label="Background track number" />
+        </div>
+        <p class="hint shint">Track chứa video nền (mặc định V1). Chỉ dùng khi đổi sang khung cao hơn.</p>
+
+        <div class="srow">
+          <span class="slabel">Safe zone (khi → 9:16)</span>
+          <div class="szedit">
+            <div class="szframe" id="szframe" title="Kéo mép trên/dưới để chỉnh">
+              <div class="szband" id="szband">
+                <div class="szhandle szhandle-top" id="sz-top-h" aria-hidden="true"></div>
+                <div class="szhandle szhandle-bot" id="sz-bot-h" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="szfields">
+              <label>Chừa trên
+                <input type="number" id="safetop" min="0" max="45" step="1" value="12" aria-label="Safe zone top margin percent" /> %
+              </label>
+              <label>Chừa dưới
+                <input type="number" id="safebottom" min="0" max="45" step="1" value="22" aria-label="Safe zone bottom margin percent" /> %
+              </label>
+              <button type="button" id="sz-reels" class="szpreset">Chuẩn Reels</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint shint">Kéo mép dải xanh (hoặc gõ số) cho khớp safe zone template của bạn. Text/graphic lệch ra ngoài dải sẽ được kéo vào trong.</p>
+
+        <button type="button" id="settings-done" class="sback">Xong</button>
+      </div>
+
+    </div>
+  </div>
+  <script src="js/CSInterface.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/updater.js"></script>
+</body>
+</html>
