@@ -5,8 +5,8 @@
 
 A CEP panel that turns the active sequence into the other two aspect ratios of
 **{9:16, 4:5, 1:1}** with one click: it duplicates the sequence, changes the
-frame size, renames it, fills the background, and places text/graphics/logos
-using your per-ratio guides.
+frame size, renames it, fills the background, and places text/graphics on your
+per-ratio guides (logos are left where they are for a manual touch).
 
 ## Choosing which sequence
 
@@ -30,8 +30,9 @@ sequences (e.g. from 9:16 → `… 4x5` and `… 1x1`):
   (e.g. 1:1 → 9:16). Going to a shorter frame needs no change.
 - **Text / graphic / MOGRT**: scale kept; vertical position set to the target
   ratio's guide line (Settings; default centre), horizontal position kept.
-- **Logo** (clip name contains "Logo"): scale kept; held at least the configured
-  px margin inside all four edges (only moved if it's closer than that).
+- **Logo** (clip name contains `logo`, `fav`, …): left exactly as-is — the
+  editor positions it by hand. Detected only so it's never mistaken for text
+  and snapped to the guide line.
 - **Other overlays**: left as-is.
 - **Audio** is never touched.
 
@@ -64,8 +65,8 @@ then offers the update on next open.
   1:1 tab (the preview reshapes to that ratio) and drag the green line to set
   where text/graphics/MOGRT sit vertically for that ratio (default centre).
   Their scale is never changed; horizontal position is kept.
-- **Logo — edge margin (px)** — clips whose name contains "Logo" keep their
-  scale and are held at least this many px inside every edge (all ratios).
+- Logos (name contains `logo`, `fav`, …) are **left untouched** — position them
+  by hand after the resize; no setting needed.
 - **AUTO** (badge next to ⟳) is realtime detection: the panel polls Premiere
   ~every 0.3s and updates the source info the moment you switch sequences.
   Click it to toggle off (persisted); the **⟳ Refresh** button always works
@@ -126,7 +127,7 @@ Primary (9:16 → 4:5 & 1:1):
 
 Taller (1:1 or 4:5 → 9:16):
 - [ ] Background scales up to fill the 9:16 frame.
-- [ ] Text/graphics sit on the guide line; logos pinned to their edge (tune in Settings).
+- [ ] Text/graphics sit on the guide line; logos kept exactly where they were.
 
 General:
 - [ ] Re-running on an already-labelled sequence swaps the label (no `… 9x16 4x5`).
@@ -136,9 +137,9 @@ General:
 
 - Background is identified by track (bottom track by default), not by content —
   a full-frame element on an upper track won't be scaled up on a taller frame.
-- Text/logo placement sets the clip's **Motion Position anchor** only — Premiere's
-  API gives no element size, and text positioned *inside* a MOGRT's own layout
-  (Motion left at centre) won't move. Fine positioning may still need a manual touch.
+- Text placement sets the clip's **Motion Position anchor** only — Premiere's API
+  gives no element size. Logos are intentionally left untouched (position them by
+  hand). Fine positioning may still need a manual touch.
 - Only the fixed **Motion** effect is adjusted (not a separate Transform effect).
 - Width-constant 1080 ratios only.
 - A graphic placed **on the background track** is treated as background (filled),

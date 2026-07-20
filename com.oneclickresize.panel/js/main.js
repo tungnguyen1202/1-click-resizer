@@ -166,35 +166,7 @@
       }
       row.querySelector(".oinfo span").textContent = sub;
       outs.appendChild(row);
-      if (ok && r.diag && r.diag.length) { outs.appendChild(diagBlock(r.diag)); }
     }
-  }
-
-  // Compact per-clip evidence line (logo/text diagnostics). Read this on a real
-  // Premiere run to see whether the logo was classified as a logo and where its
-  // Motion Position anchor ended up.
-  function diagBlock(diag) {
-    var box = document.createElement("div");
-    box.className = "odiag hint";
-    var KIND = { bg: "nền", logo: "logo", graphic: "text/graphic", other: "khác" };
-    var lines = [];
-    for (var i = 0; i < diag.length; i++) {
-      var d = diag[i];
-      var s = "· " + (d.n || "?") + " [" + (KIND[d.k] || d.k) + "]";
-      if (d.k === "bg") {
-        s += d.sc ? " — đã phóng to nền" : " — nền giữ nguyên scale";
-      } else if (typeof d.y0 === "number") {
-        var y1 = (typeof d.y1 === "number") ? d.y1 : d.y0;
-        s += " — Y " + d.y0 + (d.mv ? " → " + y1 : " (giữ nguyên)");
-        if (d.k === "other") { s += " ⚠ không được canh"; }
-      } else {
-        s += " — không có Motion Position";
-      }
-      lines.push(s);
-    }
-    box.textContent = lines.join("\n");
-    box.style.whiteSpace = "pre-line";
-    return box;
   }
 
   function setBusy(busy) {
