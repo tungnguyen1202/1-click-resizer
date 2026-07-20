@@ -73,9 +73,15 @@
   // force=true (manual ⟳) always repaints; the realtime poll passes false so
   // an unchanged answer costs nothing and never wipes a visible status message.
   var lastSourceRes = null;
+  var sourceInFlight = false;
   function refreshSource(force) {
+    // Skip a poll tick if the previous probe hasn't answered yet — keeps the
+    // fast interval from stacking evalScript calls when Premiere is busy.
+    if (sourceInFlight && !force) { return; }
+    sourceInFlight = true;
     ensureJsx(function () {
       evalAsync("RSZ_activeSequenceInfo()", function (res) {
+        sourceInFlight = false;
         if (!force && res === lastSourceRes) { return; }
         lastSourceRes = res;
         var el = document.querySelector(".source .meta");
@@ -117,6 +123,8 @@
                  : "Đã tắt tự nhận diện — bấm để bật (hoặc dùng nút ⟳)";
   }
 
+  var AUTO_POLL_MS = 300; // near-instant selection detection
+
   function setAuto(on) {
     window.RSZ_AUTO = !!on;
     try { window.localStorage.setItem(AUTO_KEY, on ? "1" : "0"); } catch (e) {}
@@ -125,8 +133,8 @@
       autoTimer = setInterval(function () {
         var go = document.getElementById("go");
         if (go && go.disabled) { return; } // don't poll mid-resize
-        refreshSource(false);
-      }, 1500);
+        refreshSource(false);             // skipped if a probe is still in flight
+      }, AUTO_POLL_MS);
     }
     paintAutoBadge();
   }
