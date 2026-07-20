@@ -38,17 +38,24 @@
                     : "Không nói chuyện được với Premiere — thử tắt/bật lại panel";
   }
 
-  // Reflect the real sequence state in the header pill + footer light +
-  // ratio thumbnail — pure display updates driven by ExtendScript's answer.
+  // Header pill = selection state. A sequence selected in the Project panel →
+  // green + its name (so you never resize the wrong one). Nothing selected, or
+  // another kind of object clicked → red + "Chưa chọn Sequence".
   function paintSequenceState(info) {
     var pill = document.getElementById("pill-seq");
     if (pill) {
-      pill.className = info ? "pill ok" : "pill rec";
-      // Reflect where the source came from: a Project-panel selection vs the
-      // open sequence. Both are valid targets for RESIZE.
-      var label = !info ? "NO SEQUENCE"
-        : info.from === "selection" ? "SEQUENCE ĐÃ CHỌN" : "SEQUENCE ĐANG MỞ";
-      pill.innerHTML = '<span class="dot"></span>' + label;
+      var selected = !!(info && info.from === "selection");
+      pill.className = selected ? "pill ok" : "pill rec";
+      pill.innerHTML = '<span class="dot"></span><span class="pill-label"></span>';
+      var label = pill.querySelector(".pill-label");
+      if (selected) {
+        var nm = info.name || "Sequence";
+        label.textContent = nm.length > 26 ? (nm.substring(0, 25) + "…") : nm;
+        pill.title = nm; // full name on hover
+      } else {
+        label.textContent = "Chưa chọn Sequence";
+        pill.title = "Hãy click chọn một sequence ở Project panel rồi bấm RESIZE";
+      }
     }
     var rb = document.querySelector(".ratiobox");
     if (rb) {

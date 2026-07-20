@@ -30,7 +30,9 @@ html,body{height:100%;margin:0}
 /* pills */
 .pills{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px}
 .pill{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:5px 10px;border-radius:999px;border:1px solid var(--line)}
-.pill .dot{width:6px;height:6px;border-radius:50%}
+.pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.pill .pill-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pill-seq{max-width:100%}
 .pill.rec{color:#f0b3a6;border-color:#5a2b21}.pill.rec .dot{background:var(--danger)}
 .pill.ok{color:#a7e9c4;border-color:#1d5236}.pill.ok .dot{background:var(--accent)}
 .pill.wait{color:var(--muted);border-color:var(--line)}.pill.wait .dot{background:var(--muted)}
