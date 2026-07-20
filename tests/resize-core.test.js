@@ -91,6 +91,24 @@ test("insetClamp keeps a coord inside a uniform margin box", () => {
   assert.ok(Math.abs(RSZ.insetClamp(0.9, 0.9) - 0.51) < 1e-9);
 });
 
+test("isLogoName detects the team's logo naming conventions", () => {
+  // core hints: "logo" and "fav" (covers fav vid / fav video / favicon)
+  assert.strictEqual(RSZ.isLogoName("Logo"), true);
+  assert.strictEqual(RSZ.isLogoName("brand_logo.png"), true);
+  assert.strictEqual(RSZ.isLogoName("fav vid"), true);
+  assert.strictEqual(RSZ.isLogoName("Fav Video 01"), true);
+  assert.strictEqual(RSZ.isLogoName("FAVICON"), true);
+  // case-insensitive
+  assert.strictEqual(RSZ.isLogoName("LOGO_final"), true);
+  // non-logo overlays stay unmatched
+  assert.strictEqual(RSZ.isLogoName("Text All-In-One"), false);
+  assert.strictEqual(RSZ.isLogoName("background.mp4"), false);
+  // guards
+  assert.strictEqual(RSZ.isLogoName(""), false);
+  assert.strictEqual(RSZ.isLogoName(null), false);
+  assert.strictEqual(RSZ.isLogoName(undefined), false);
+});
+
 test("clamp01 keeps values in [0,1]", () => {
   assert.strictEqual(RSZ.clamp01(-0.2), 0);
   assert.strictEqual(RSZ.clamp01(1.4), 1);

@@ -69,6 +69,21 @@ var RSZ = (function () {
     return currentScale * factor;
   }
 
+  // A clip is treated as a logo when its name contains any of these hints
+  // (case-insensitive substring). The team names logo files like "logo",
+  // "fav vid", "fav video" — "fav" covers all of those. Add more hints here to
+  // teach the panel new naming conventions; keep them lowercase.
+  var LOGO_NAME_HINTS = ["logo", "fav"];
+
+  function isLogoName(name) {
+    if (!name) { return false; }
+    var n = String(name).toLowerCase();
+    for (var i = 0; i < LOGO_NAME_HINTS.length; i++) {
+      if (n.indexOf(LOGO_NAME_HINTS[i]) !== -1) { return true; }
+    }
+    return false;
+  }
+
   function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
   // Keep a normalized coord at least `margin` from both edges (0 and 1).
@@ -91,7 +106,9 @@ var RSZ = (function () {
     buildName: buildName,
     fillScale: fillScale,
     clamp01: clamp01,
-    insetClamp: insetClamp
+    insetClamp: insetClamp,
+    LOGO_NAME_HINTS: LOGO_NAME_HINTS,
+    isLogoName: isLogoName
   };
 })();
 

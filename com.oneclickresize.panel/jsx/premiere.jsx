@@ -209,7 +209,7 @@ function RSZ_applyFill(clip, srcW, srcH, tgtW, tgtH) {
 }
 
 function RSZ_isLogoClip(clip) {
-  return !!(clip.name && String(clip.name).toLowerCase().indexOf("logo") !== -1);
+  return RSZ.isLogoName(clip && clip.name);
 }
 
 // Read a clip's normalized Motion Position, or null if it has none. Used only
