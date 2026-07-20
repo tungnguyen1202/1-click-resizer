@@ -212,6 +212,20 @@ function RSZ_isLogoClip(clip) {
   return !!(clip.name && String(clip.name).toLowerCase().indexOf("logo") !== -1);
 }
 
+// Read a clip's normalized Motion Position, or null if it has none. Used only
+// for diagnostics — captures where a clip sits before/after repositioning so a
+// single real-Premiere run reveals WHY a logo lands where it does (untouched?
+// clamped? anchor at centre vs corner?).
+function RSZ_readPos(clip) {
+  var motion = RSZ_findComponent(clip, "Motion");
+  if (!motion) { return null; }
+  var posProp = RSZ_findProp(motion, "Position");
+  if (!posProp) { return null; }
+  try { return posProp.getValue(); } catch (e) { return null; }
+}
+
+function RSZ_r3(n) { return Math.round(n * 1000) / 1000; }
+
 // Set an overlay clip's vertical Motion Position, keeping X and Scale.
 // Returns true if it moved.
 function RSZ_setClipY(clip, newY) {
@@ -313,28 +327,48 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11, logoMargin) {
         // the real background is never mistaken for an overlay.
         if (bgIndex < 0 || bgIndex >= dup.videoTracks.numTracks) { bgIndex = 0; }
         var guideY = guideByRatio[tgtRatio];
+        // Per-clip evidence: name, detected kind, position before/after, and
+        // whether it moved/scaled. Distinguishes "logo left untouched because
+        // it wasn't classified as a logo" from "logo clamped but anchor sits at
+        // its centre". Capped so a huge sequence can't bloat the payload.
+        var diagParts = [];
+        var DIAG_CAP = 40;
 
         for (var vt = 0; vt < dup.videoTracks.numTracks; vt++) {
           var track = dup.videoTracks[vt];
           for (var c = 0; c < track.clips.numItems; c++) {
             var clip = track.clips[c];
+            var kind = "other", mv = false, sc = false;
+            var p0 = RSZ_readPos(clip);
             if (vt === bgIndex) {
               // Background: cover the new frame on both axes (fillScale is a
               // no-op when the current scale already covers).
+              kind = "bg";
               if (!RSZ_isGraphicClip(clip)) {
-                try { if (RSZ_applyFill(clip, srcW, srcH, tgt.w, tgt.h)) { scaled++; } } catch (ce) {}
+                try { if (RSZ_applyFill(clip, srcW, srcH, tgt.w, tgt.h)) { sc = true; scaled++; } } catch (ce) {}
               }
             } else if (RSZ_isLogoClip(clip)) {
               // Logo: keep Scale, hold inside a 50px margin box (all edges).
-              try { if (RSZ_repositionLogo(clip, tgt.w, tgt.h, logoMargin)) { moved++; } } catch (le) {}
+              kind = "logo";
+              try { if (RSZ_repositionLogo(clip, tgt.w, tgt.h, logoMargin)) { mv = true; moved++; } } catch (le) {}
             } else if (RSZ_isGraphicClip(clip)) {
               // Text / graphic / MOGRT: keep Scale, snap Y to this ratio's guide.
-              try { if (RSZ_setClipY(clip, guideY)) { moved++; } } catch (se) {}
+              kind = "graphic";
+              try { if (RSZ_setClipY(clip, guideY)) { mv = true; moved++; } } catch (se) {}
+            }
+            var p1 = RSZ_readPos(clip);
+            if (diagParts.length < DIAG_CAP) {
+              var d = '{"n":"' + RSZ_esc(String(clip.name)) + '","k":"' + kind + '"';
+              if (p0) { d += ',"x0":' + RSZ_r3(p0[0]) + ',"y0":' + RSZ_r3(p0[1]); }
+              if (p1) { d += ',"x1":' + RSZ_r3(p1[0]) + ',"y1":' + RSZ_r3(p1[1]); }
+              d += ',"mv":' + (mv ? "true" : "false") + ',"sc":' + (sc ? "true" : "false") + "}";
+              diagParts.push(d);
             }
           }
         }
         item = '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name)
-             + '","scaled":' + scaled + ',"moved":' + moved + '}';
+             + '","scaled":' + scaled + ',"moved":' + moved
+             + ',"diag":[' + diagParts.join(",") + ']}';
       }
     } catch (te) {
       item = '{"ratio":"' + tgtRatio + '","error":"' + RSZ_esc(String(te)) + '"'
