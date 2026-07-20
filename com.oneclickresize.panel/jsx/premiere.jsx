@@ -70,16 +70,80 @@ function RSZ_esc(s) {
   return out;
 }
 
+// ---- source selection -------------------------------------------------------
+
+// Resolve a Sequence object from a Project-panel projectItem (a sequence need
+// not be open to be cloned). Match by the sequence's own projectItem node id
+// when available; fall back to name.
+function RSZ_seqFromProjectItem(item) {
+  if (!item) { return null; }
+  var seqs = app.project.sequences;
+  var i, s;
+  for (i = 0; i < seqs.numSequences; i++) {
+    s = seqs[i];
+    try {
+      if (s.projectItem && item.nodeId && s.projectItem.nodeId === item.nodeId) { return s; }
+    } catch (e) {}
+  }
+  for (i = 0; i < seqs.numSequences; i++) {           // fallback: by name
+    if (seqs[i].name === item.name) { return seqs[i]; }
+  }
+  return null;
+}
+
+function RSZ_isSequenceItem(item) {
+  try { return !!(item && typeof item.isSequence === "function" && item.isSequence()); }
+  catch (e) { return false; }
+}
+
+// The sequence to act on: the one SELECTED in the Project panel if it is a
+// sequence, otherwise the open/active sequence. Returns { seq, from }.
+function RSZ_resolveSource() {
+  try {
+    if (typeof app.getCurrentProjectViewSelection === "function") {
+      var sel = app.getCurrentProjectViewSelection();
+      if (sel && sel.length) {
+        for (var i = 0; i < sel.length; i++) {
+          if (RSZ_isSequenceItem(sel[i])) {
+            var s = RSZ_seqFromProjectItem(sel[i]);
+            if (s) { return { seq: s, from: "selection" }; }
+          }
+        }
+      }
+    }
+  } catch (e) {}
+  var a = app.project.activeSequence;
+  return a ? { seq: a, from: "active" } : { seq: null, from: "none" };
+}
+
+// Diagnostics for when no source can be found — surfaced to the panel so a
+// single failed run tells us exactly which API is missing.
+function RSZ_sourceDiag() {
+  var hasSelApi = (typeof app.getCurrentProjectViewSelection === "function");
+  var selCount = -1, seqSel = 0;
+  try {
+    if (hasSelApi) {
+      var sel = app.getCurrentProjectViewSelection();
+      selCount = sel ? sel.length : 0;
+      for (var i = 0; i < selCount; i++) { if (RSZ_isSequenceItem(sel[i])) { seqSel++; } }
+    }
+  } catch (e) {}
+  return '"selApi":' + (hasSelApi ? 'true' : 'false')
+       + ',"selCount":' + selCount + ',"seqSelected":' + seqSel
+       + ',"hasActive":' + (app.project.activeSequence ? 'true' : 'false');
+}
+
 // ---- sequence info ---------------------------------------------------------
 
 // Internal: returns the live objects + geometry (not for evalScript).
 function RSZ_activeInfoObj() {
-  var seq = app.project.activeSequence;
+  var r = RSZ_resolveSource();
+  var seq = r.seq;
   if (!seq) { return null; }
   var st = seq.getSettings();
   var w = st.videoFrameWidth;
   var h = st.videoFrameHeight;
-  return { seq: seq, name: seq.name, width: w, height: h, ratio: RSZ.detectRatio(w, h) };
+  return { seq: seq, from: r.from, name: seq.name, width: w, height: h, ratio: RSZ.detectRatio(w, h) };
 }
 
 // Public (evalScript): JSON string for the panel. detectRatio is the single
@@ -88,7 +152,7 @@ function RSZ_activeSequenceInfo() {
   var o = RSZ_activeInfoObj();
   if (!o) { return "null"; }
   return '{"name":"' + RSZ_esc(o.name) + '","width":' + o.width
-       + ',"height":' + o.height
+       + ',"height":' + o.height + ',"from":"' + o.from + '"'
        + ',"ratio":' + (o.ratio ? ('"' + o.ratio + '"') : 'null') + '}';
 }
 
@@ -159,6 +223,19 @@ function RSZ_clampClipToSafe(clip, left, right, top, bottom) {
   return false;
 }
 
+// Make a sequence the active one — assignment first, openSequence as fallback
+// (needed when the source was picked in the Project panel but not open).
+function RSZ_makeActive(seq) {
+  try { app.project.activeSequence = seq; } catch (e) {}
+  try {
+    var a = app.project.activeSequence;
+    if ((!a || a.sequenceID !== seq.sequenceID) && seq.sequenceID
+        && typeof app.project.openSequence === "function") {
+      app.project.openSequence(seq.sequenceID);
+    }
+  } catch (e2) {}
+}
+
 // ---- orchestration ---------------------------------------------------------
 
 // Args (all numbers): bgTrack = 1-based background track (default 1);
@@ -179,7 +256,7 @@ function RSZ_runResizeAll(bgTrack, safeTop, safeBottom) {
   var zoneBottom = 1 - safeBottom;
 
   var info = RSZ_activeInfoObj();
-  if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE"}'; }
+  if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
   if (!info.ratio) {
     return '{"ok":false,"error":"UNKNOWN_RATIO","width":' + info.width + ',"height":' + info.height + '}';
   }
@@ -198,8 +275,8 @@ function RSZ_runResizeAll(bgTrack, safeTop, safeBottom) {
     var dup = null; // visible in catch so a stranded duplicate can be reported
     try {
       // Re-select the source each time so every duplicate derives from the
-      // original, not from a previously created duplicate.
-      app.project.activeSequence = sourceSeq;
+      // original (also opens it if it was only selected in the Project panel).
+      RSZ_makeActive(sourceSeq);
       dup = RSZ_duplicateSequence(sourceSeq);
       if (!dup) {
         item = '{"ratio":"' + tgtRatio + '","error":"DUPLICATE_FAILED"}';
@@ -248,6 +325,7 @@ function RSZ_runResizeAll(bgTrack, safeTop, safeBottom) {
     parts.push(item);
   }
 
-  try { app.project.activeSequence = sourceSeq; } catch (re) {}
-  return '{"ok":true,"source":"' + info.ratio + '","results":[' + parts.join(",") + '],"error":null}';
+  RSZ_makeActive(sourceSeq);
+  return '{"ok":true,"source":"' + info.ratio + '","from":"' + info.from
+       + '","results":[' + parts.join(",") + '],"error":null}';
 }

@@ -44,7 +44,11 @@
     var pill = document.getElementById("pill-seq");
     if (pill) {
       pill.className = info ? "pill ok" : "pill rec";
-      pill.innerHTML = '<span class="dot"></span>' + (info ? "SEQUENCE OPEN" : "NO SEQUENCE");
+      // Reflect where the source came from: a Project-panel selection vs the
+      // open sequence. Both are valid targets for RESIZE.
+      var label = !info ? "NO SEQUENCE"
+        : info.from === "selection" ? "SEQUENCE ĐÃ CHỌN" : "SEQUENCE ĐANG MỞ";
+      pill.innerHTML = '<span class="dot"></span>' + label;
     }
     var rb = document.querySelector(".ratiobox");
     if (rb) {
@@ -56,7 +60,7 @@
 
   function resetMeta(el) {
     el.querySelector("b").textContent = "—";
-    el.querySelector("span").textContent = "mở một sequence để bắt đầu";
+    el.querySelector("span").textContent = "chọn hoặc mở một sequence để bắt đầu";
   }
 
   // force=true (manual ⟳) always repaints; the realtime poll passes false so
@@ -126,7 +130,7 @@
     if (!payload.ok) {
       outs.innerHTML = '<p class="hint">' +
         (payload.error === "UNKNOWN_RATIO" ? "ratio nguồn không nằm trong 9:16 / 4:5 / 1:1"
-         : payload.error === "NO_ACTIVE_SEQUENCE" ? "không có sequence đang mở"
+         : payload.error === "NO_ACTIVE_SEQUENCE" ? "chưa chọn hoặc mở sequence nào"
          : "có lỗi xảy ra") + "</p>";
       return;
     }

@@ -19,7 +19,7 @@
 
 ## 🇬🇧 English
 
-Press **RESIZE** and the panel turns the active sequence into the other two ratios of **{9:16, 4:5, 1:1}** as new sequences — duplicating, resizing the frame, renaming, filling the background, and keeping text/graphics inside the Reels safe zone. Your original sequence and audio are never touched.
+**Click a sequence in the Project panel** (no need to open it) and press **RESIZE** — the panel turns it into the other two ratios of **{9:16, 4:5, 1:1}** as new sequences: duplicating, resizing the frame, renaming, filling the background, and keeping text/graphics inside the Reels safe zone. Your original sequence and audio are never touched.
 
 **What one click does**
 - **Duplicate** the active sequence (original untouched).
@@ -40,7 +40,7 @@ From then on the panel updates itself — you never reinstall.
 
 ## 🇻🇳 Tiếng Việt
 
-Bấm **RESIZE**, panel tự biến sequence đang mở thành hai ratio còn lại trong **{9:16, 4:5, 1:1}** dưới dạng sequence mới — tự duplicate, đổi khung, đặt tên, fill nền và giữ text/graphic trong vùng an toàn (safe zone) của Reels. **Sequence gốc và audio không bao giờ bị đụng tới.**
+**Click chọn một sequence ở Project panel** (không cần mở) rồi bấm **RESIZE** — panel biến nó thành hai ratio còn lại trong **{9:16, 4:5, 1:1}** dưới dạng sequence mới: tự duplicate, đổi khung, đặt tên, fill nền và giữ text/graphic trong vùng an toàn (safe zone) của Reels. **Sequence gốc và audio không bao giờ bị đụng tới.**
 
 **Một cú click làm gì**
 - **Duplicate** sequence đang mở (giữ nguyên bản gốc).

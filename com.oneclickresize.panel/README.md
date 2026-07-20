@@ -8,9 +8,16 @@ A CEP panel that turns the active sequence into the other two aspect ratios of
 frame size, renames it, fills the background, and keeps overlays inside the
 Reels safe zone.
 
+## Choosing which sequence
+
+The panel resizes **the sequence selected in the Project panel** (just click it —
+no need to open it). If nothing is selected, it falls back to the sequence
+currently open in the timeline. The source block shows which one it's using
+(`SEQUENCE ĐÃ CHỌN` vs `SEQUENCE ĐANG MỞ`).
+
 ## What one click does
 
-From the active sequence, **RESIZE** creates the two remaining ratios as new
+From the source sequence, **RESIZE** creates the two remaining ratios as new
 sequences (e.g. from 9:16 → `… 4-5` and `… 1-1`):
 
 - **Duplicate** the sequence (the original is never modified).
