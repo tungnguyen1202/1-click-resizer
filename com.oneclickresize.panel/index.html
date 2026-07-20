@@ -86,26 +86,30 @@
         <p class="hint shint">Track chứa video nền (mặc định V1). Chỉ dùng khi đổi sang khung cao hơn.</p>
 
         <div class="srow">
-          <span class="slabel">Safe zone (khi → 9:16)</span>
-          <div class="szedit">
-            <div class="szframe" id="szframe" title="Kéo mép trên/dưới để chỉnh">
-              <div class="szband" id="szband">
-                <div class="szhandle szhandle-top" id="sz-top-h" aria-hidden="true"></div>
-                <div class="szhandle szhandle-bot" id="sz-bot-h" aria-hidden="true"></div>
-              </div>
+          <span class="slabel">Vị trí Text / Graphic / MOGRT</span>
+          <div class="gz-tabs">
+            <button type="button" class="gz-tab active" data-ratio="9-16">9:16</button>
+            <button type="button" class="gz-tab" data-ratio="4-5">4:5</button>
+            <button type="button" class="gz-tab" data-ratio="1-1">1:1</button>
+          </div>
+          <div class="gzedit">
+            <div class="gzframe" id="gzframe" title="Kéo đường xanh để đặt vị trí dọc">
+              <div class="gzline" id="gzline" aria-hidden="true"></div>
             </div>
-            <div class="szfields">
-              <label>Chừa trên
-                <input type="number" id="safetop" min="0" max="45" step="1" value="12" aria-label="Safe zone top margin percent" /> %
+            <div class="gzfields">
+              <label>Vị trí dọc
+                <input type="number" id="guideY" min="0" max="100" step="1" value="50" aria-label="Text guide vertical position percent" /> %
               </label>
-              <label>Chừa dưới
-                <input type="number" id="safebottom" min="0" max="45" step="1" value="22" aria-label="Safe zone bottom margin percent" /> %
-              </label>
-              <button type="button" id="sz-reels" class="szpreset">Chuẩn Reels</button>
             </div>
           </div>
         </div>
-        <p class="hint shint">Kéo mép dải xanh (hoặc gõ số) cho khớp safe zone template của bạn. Text/graphic lệch ra ngoài dải sẽ được kéo vào trong.</p>
+        <p class="hint shint">Kéo đường xanh (hoặc gõ %) để đặt vị trí dọc cho text ở ratio đang chọn. Giữ nguyên vị trí ngang & scale.</p>
+
+        <div class="srow">
+          <label class="slabel" for="logomargin">Logo — cách mép (px)</label>
+          <input type="number" id="logomargin" min="0" max="400" step="1" value="50" aria-label="Logo edge margin in pixels" />
+        </div>
+        <p class="hint shint">Layer có chữ "Logo" trong tên: giữ Scale, ghim cách mép trên/dưới (theo bên nó đang ở) khoảng cách này.</p>
 
         <button type="button" id="settings-done" class="sback">Xong</button>
       </div>

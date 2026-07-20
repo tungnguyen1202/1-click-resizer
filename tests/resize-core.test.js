@@ -71,27 +71,21 @@ test("fillScale covers the target frame on both axes, never scales down", () => 
   assert.strictEqual(RSZ.fillScale(100, -10, 1920, 1080, 1920), 100);
 });
 
-test("clampToSafe only moves positions outside the zone", () => {
-  // inside the zone -> unchanged
-  var a = RSZ.clampToSafe(0.5, 0.5, 0.05, 0.95, 0.12, 0.78);
-  assert.strictEqual(a.x, 0.5);
-  assert.strictEqual(a.y, 0.5);
-  assert.strictEqual(a.changed, false);
-  // below the safe bottom -> pulled up to the bottom edge
-  var b = RSZ.clampToSafe(0.5, 0.92, 0.05, 0.95, 0.12, 0.78);
-  assert.strictEqual(b.y, 0.78);
-  assert.strictEqual(b.changed, true);
-  // above the safe top -> pulled down to the top edge
-  var c = RSZ.clampToSafe(0.5, 0.03, 0.05, 0.95, 0.12, 0.78);
-  assert.strictEqual(c.y, 0.12);
-  assert.strictEqual(c.changed, true);
-  // outside horizontally -> clamped in x
-  var d = RSZ.clampToSafe(0.99, 0.5, 0.05, 0.95, 0.12, 0.78);
-  assert.strictEqual(d.x, 0.95);
-  assert.strictEqual(d.changed, true);
-  // inverted bounds are normalized, not honored blindly
-  var e = RSZ.clampToSafe(0.5, 0.5, 0.9, 0.1, 0.8, 0.2);
-  assert.strictEqual(e.x, 0.5);
-  assert.strictEqual(e.y, 0.5);
-  assert.strictEqual(e.changed, false);
+test("edgePinY keeps the nearer edge, marginPx away (normalized)", () => {
+  // top half -> pinned marginPx from the top; 50/1920 ≈ 0.026
+  assert.ok(Math.abs(RSZ.edgePinY(0.2, 1920, 50) - 0.026) < 0.001);
+  // bottom half -> pinned marginPx from the bottom; 1 - 50/1920 ≈ 0.974
+  assert.ok(Math.abs(RSZ.edgePinY(0.9, 1920, 50) - 0.974) < 0.001);
+  // same 50px is a bigger fraction on a shorter frame (1080): 50/1080 ≈ 0.046
+  assert.ok(Math.abs(RSZ.edgePinY(0.1, 1080, 50) - 0.046) < 0.001);
+  // exactly center counts as bottom half (>= 0.5)
+  assert.ok(RSZ.edgePinY(0.5, 1080, 50) > 0.5);
+  // degenerate height -> unchanged
+  assert.strictEqual(RSZ.edgePinY(0.3, 0, 50), 0.3);
+});
+
+test("clamp01 keeps values in [0,1]", () => {
+  assert.strictEqual(RSZ.clamp01(-0.2), 0);
+  assert.strictEqual(RSZ.clamp01(1.4), 1);
+  assert.strictEqual(RSZ.clamp01(0.42), 0.42);
 });

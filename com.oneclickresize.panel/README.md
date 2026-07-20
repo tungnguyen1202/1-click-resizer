@@ -5,8 +5,8 @@
 
 A CEP panel that turns the active sequence into the other two aspect ratios of
 **{9:16, 4:5, 1:1}** with one click: it duplicates the sequence, changes the
-frame size, renames it, fills the background, and keeps overlays inside the
-Reels safe zone.
+frame size, renames it, fills the background, and places text/graphics/logos
+using your per-ratio guides.
 
 ## Choosing which sequence
 
@@ -28,9 +28,11 @@ sequences (e.g. from 9:16 → `… 4-5` and `… 1-1`):
 - **Background** (clips on the background track, default V1, that aren't
   graphics): scaled up to keep covering **only when the target is taller**
   (e.g. 1:1 → 9:16). Going to a shorter frame needs no change.
-- **Overlays** (everything else): left as-is, except when the target is 9:16
-  they are clamped into the **Reels safe zone** so text/graphics don't fall in
-  the top/bottom UI areas.
+- **Text / graphic / MOGRT**: scale kept; vertical position set to the target
+  ratio's guide line (Settings; default centre), horizontal position kept.
+- **Logo** (clip name contains "Logo"): scale kept; pinned to its nearer edge
+  (top/bottom) by the configured px margin.
+- **Other overlays**: left as-is.
 - **Audio** is never touched.
 
 ## Publishing a new version (maintainer only)
@@ -58,11 +60,15 @@ then offers the update on next open.
 ## Settings (⚙)
 
 - **Track nền (V…)** — which video track is the background (default 1 = V1).
-- **Safe zone** — a visual 9:16 editor: drag the green band's top/bottom edges
-  (or type the margin %), or use **Chuẩn Reels** (14% / 35%). Only used when the
-  target is 9:16.
+- **Text position (guide per ratio)** — a visual editor: switch the 9:16 / 4:5 /
+  1:1 tab (the preview reshapes to that ratio) and drag the green line to set
+  where text/graphics/MOGRT sit vertically for that ratio (default centre).
+  Their scale is never changed; horizontal position is kept.
+- **Logo — edge margin (px)** — clips whose name contains "Logo" keep their
+  scale and are pinned this many px from whichever edge (top/bottom) they're
+  nearer to, in every ratio.
 - **AUTO** (badge next to ⟳) is realtime detection: the panel polls Premiere
-  every 1.5s and updates the source info the moment you switch sequences.
+  ~every 0.3s and updates the source info the moment you switch sequences.
   Click it to toggle off (persisted); the **⟳ Refresh** button always works
   as the manual path.
 
@@ -121,7 +127,7 @@ Primary (9:16 → 4:5 & 1:1):
 
 Taller (1:1 or 4:5 → 9:16):
 - [ ] Background scales up to fill the 9:16 frame.
-- [ ] Text/graphics land inside the safe zone (tune margins in Settings to match your template).
+- [ ] Text/graphics sit on the guide line; logos pinned to their edge (tune in Settings).
 
 General:
 - [ ] Re-running on an already-labelled sequence swaps the label (no `… 9-16 4-5`).
@@ -131,15 +137,13 @@ General:
 
 - Background is identified by track (bottom track by default), not by content —
   a full-frame element on an upper track won't be scaled up on a taller frame.
-- Overlay placement is a safe-zone **clamp**, not precise per-element layout:
-  Premiere's scripting API exposes neither a stable per-element identity across
-  projects nor element sizes, so automatic "put each text/logo exactly here"
-  isn't reliable. Fine positioning stays manual.
+- Text/logo placement sets the clip's **Motion Position anchor** only — Premiere's
+  API gives no element size, and text positioned *inside* a MOGRT's own layout
+  (Motion left at centre) won't move. Fine positioning may still need a manual touch.
 - Only the fixed **Motion** effect is adjusted (not a separate Transform effect).
 - Width-constant 1080 ratios only.
-- A graphic placed **on the background track** is neither scaled nor safe-zone
-  clamped (the background track is treated as background only). Keep graphics on
-  upper tracks.
+- A graphic placed **on the background track** is treated as background (filled),
+  not repositioned. Keep graphics/logos on upper tracks.
 - If a duplicate fails partway (e.g. Premiere rejects the frame-size change on an
   unusual sequence), the stray half-configured sequence is left in the project
   and reported as an error row; the source is never affected — just delete the
@@ -156,7 +160,7 @@ com.oneclickresize.panel/
   js/CSInterface.js     Adobe bridge (vendored)
   js/main.js            panel controller (no business logic)
   js/updater.js         in-panel auto-update (git fetch/pull; needs clone+symlink install)
-  jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, clampToSafe) — Node-tested
+  jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, edgePinY) — Node-tested
   jsx/premiere.jsx      Premiere DOM layer (#includes resize-core)
 ```
 

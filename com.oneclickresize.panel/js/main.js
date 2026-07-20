@@ -159,7 +159,7 @@
       row.querySelector(".oinfo b").textContent = r.name || (RATIO_DISPLAY[r.ratio] || r.ratio);
       var sub = RATIO_DISPLAY[r.ratio] || r.ratio;
       if (ok && r.scaled) { sub += " · nền phóng to"; }
-      if (ok && r.moved) { sub += " · căn safe zone"; }
+      if (ok && r.moved) { sub += " · đã canh " + r.moved + " lớp"; }
       if (!ok) {
         sub = "không tạo được";
         if (r.orphan) { sub += " — bản dở dang: " + r.orphan; }
@@ -182,11 +182,12 @@
     btn.disabled = true;
     setBusy(true);
     var bg = parseInt(window.RSZ_BG_TRACK, 10) || 1;
-    var stp = (typeof window.RSZ_SAFE_TOP === "number" && !isNaN(window.RSZ_SAFE_TOP)) ? window.RSZ_SAFE_TOP : 0.12;
-    var sbt = (typeof window.RSZ_SAFE_BOTTOM === "number" && !isNaN(window.RSZ_SAFE_BOTTOM)) ? window.RSZ_SAFE_BOTTOM : 0.22;
+    var g = window.RSZ_GUIDE || {};
+    var g9 = gnum(g["9-16"], 0.5), g45 = gnum(g["4-5"], 0.5), g11 = gnum(g["1-1"], 0.5);
+    var lm = (typeof window.RSZ_LOGO_MARGIN === "number" && !isNaN(window.RSZ_LOGO_MARGIN)) ? window.RSZ_LOGO_MARGIN : 50;
     setStatus("Đang xử lý…");
     ensureJsx(function () {
-      evalAsync('RSZ_runResizeAll(' + bg + ',' + stp + ',' + sbt + ')', function (res) {
+      evalAsync('RSZ_runResizeAll(' + bg + ',' + g9 + ',' + g45 + ',' + g11 + ',' + lm + ')', function (res) {
         btn.disabled = false;
         setBusy(false);
         var payload = null;
@@ -217,11 +218,28 @@
   window.initPanel();
 
   var BG_TRACK_KEY = "rsz.bgTrack";
-  var SAFE_TOP_KEY = "rsz.safeTop";
-  var SAFE_BOTTOM_KEY = "rsz.safeBottom";
+  var GUIDE_KEY = "rsz.guideY";       // JSON {"9-16":..,"4-5":..,"1-1":..}
+  var LOGO_MARGIN_KEY = "rsz.logoMargin";
+
+  function gnum(v, def) {
+    v = parseFloat(v);
+    if (isNaN(v)) { return def; }
+    return v < 0 ? 0 : (v > 1 ? 1 : v);
+  }
+
   window.RSZ_BG_TRACK = parseInt(window.localStorage.getItem(BG_TRACK_KEY) || "1", 10) || 1;
-  window.RSZ_SAFE_TOP = parseFloat(window.localStorage.getItem(SAFE_TOP_KEY) || "0.12");
-  window.RSZ_SAFE_BOTTOM = parseFloat(window.localStorage.getItem(SAFE_BOTTOM_KEY) || "0.22");
+  window.RSZ_GUIDE = (function () {
+    var d = { "9-16": 0.5, "4-5": 0.5, "1-1": 0.5 };
+    try {
+      var saved = JSON.parse(window.localStorage.getItem(GUIDE_KEY) || "{}");
+      d["9-16"] = gnum(saved["9-16"], 0.5);
+      d["4-5"] = gnum(saved["4-5"], 0.5);
+      d["1-1"] = gnum(saved["1-1"], 0.5);
+    } catch (e) {}
+    return d;
+  })();
+  window.RSZ_LOGO_MARGIN = parseFloat(window.localStorage.getItem(LOGO_MARGIN_KEY) || "50");
+  if (isNaN(window.RSZ_LOGO_MARGIN) || window.RSZ_LOGO_MARGIN < 0) { window.RSZ_LOGO_MARGIN = 50; }
 
   function showSettings(show) {
     var main = document.getElementById("main-view");
@@ -230,68 +248,48 @@
     if (settings) { settings.style.display = show ? "block" : "none"; }
   }
 
-  // ---- Safe-zone visual editor -------------------------------------------
-  var MIN_BAND = 0.10; // keep at least this much band between top and bottom
-  var MAX_MARGIN = 0.45;
+  // ---- Text guide editor (one horizontal guide line per ratio) -----------
+  var RATIO_ASPECT = { "9-16": 1920 / 1080, "4-5": 1350 / 1080, "1-1": 1 };
+  var GZ_WIDTH = 92; // px; frame height = width * aspect
+  var curRatio = "9-16";
 
-  function clampFrac(v) {
-    if (isNaN(v) || v < 0) { return 0; }
-    if (v > MAX_MARGIN) { return MAX_MARGIN; }
-    return v;
+  function saveGuide() {
+    try { window.localStorage.setItem(GUIDE_KEY, JSON.stringify(window.RSZ_GUIDE)); } catch (e) {}
   }
 
-  function saveZone() {
-    window.localStorage.setItem(SAFE_TOP_KEY, String(window.RSZ_SAFE_TOP));
-    window.localStorage.setItem(SAFE_BOTTOM_KEY, String(window.RSZ_SAFE_BOTTOM));
-  }
-
-  function renderZone() {
-    var band = document.getElementById("szband");
-    if (band) {
-      band.style.top = (window.RSZ_SAFE_TOP * 100) + "%";
-      band.style.bottom = (window.RSZ_SAFE_BOTTOM * 100) + "%";
+  function renderGuide() {
+    var frame = document.getElementById("gzframe");
+    var line = document.getElementById("gzline");
+    var input = document.getElementById("guideY");
+    var y = window.RSZ_GUIDE[curRatio];
+    if (frame) { frame.style.height = Math.round(GZ_WIDTH * RATIO_ASPECT[curRatio]) + "px"; }
+    if (line) { line.style.top = (y * 100) + "%"; }
+    if (input && document.activeElement !== input) { input.value = Math.round(y * 100); }
+    var tabs = document.querySelectorAll(".gz-tab");
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].className = "gz-tab" + (tabs[i].getAttribute("data-ratio") === curRatio ? " active" : "");
     }
-    var st = document.getElementById("safetop");
-    var sb = document.getElementById("safebottom");
-    if (st && document.activeElement !== st) { st.value = Math.round(window.RSZ_SAFE_TOP * 100); }
-    if (sb && document.activeElement !== sb) { sb.value = Math.round(window.RSZ_SAFE_BOTTOM * 100); }
   }
 
-  function setTop(f) {
-    f = clampFrac(f);
-    var maxTop = 1 - window.RSZ_SAFE_BOTTOM - MIN_BAND;
-    if (maxTop < 0) { maxTop = 0; }
-    if (f > maxTop) { f = maxTop; }
-    window.RSZ_SAFE_TOP = f;
-    renderZone(); saveZone();
+  function setGuideY(f) {
+    window.RSZ_GUIDE[curRatio] = gnum(f, 0.5);
+    renderGuide(); saveGuide();
   }
 
-  function setBottom(f) {
-    f = clampFrac(f);
-    var maxBot = 1 - window.RSZ_SAFE_TOP - MIN_BAND;
-    if (maxBot < 0) { maxBot = 0; }
-    if (f > maxBot) { f = maxBot; }
-    window.RSZ_SAFE_BOTTOM = f;
-    renderZone(); saveZone();
-  }
-
-  function initDragHandle(handleId, edge) {
-    var h = document.getElementById(handleId);
-    var frame = document.getElementById("szframe");
-    if (!h || !frame) { return; }
+  function initGuideDrag() {
+    var handle = document.getElementById("gzline");
+    var frame = document.getElementById("gzframe");
+    if (!handle || !frame) { return; }
     function onMove(e) {
-      // If the button was released outside the panel window, no mouseup ever
-      // reaches us — stop dragging as soon as we see the button is up.
       if (e.buttons !== undefined && !(e.buttons & 1)) { onUp(); return; }
       var rect = frame.getBoundingClientRect();
-      var y = (e.clientY - rect.top) / rect.height;
-      if (edge === "top") { setTop(y); } else { setBottom(1 - y); }
+      setGuideY((e.clientY - rect.top) / rect.height);
     }
     function onUp() {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     }
-    h.addEventListener("mousedown", function (e) {
+    handle.addEventListener("mousedown", function (e) {
       e.preventDefault();
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
@@ -315,21 +313,33 @@
       });
     }
 
-    var st = document.getElementById("safetop");
-    var sb = document.getElementById("safebottom");
-    if (st) { st.addEventListener("change", function () { setTop((parseFloat(st.value) || 0) / 100); }); }
-    if (sb) { sb.addEventListener("change", function () { setBottom((parseFloat(sb.value) || 0) / 100); }); }
-    initDragHandle("sz-top-h", "top");
-    initDragHandle("sz-bot-h", "bottom");
-    var reels = document.getElementById("sz-reels");
-    if (reels) {
-      reels.addEventListener("click", function () {
-        window.RSZ_SAFE_TOP = 0.14;
-        window.RSZ_SAFE_BOTTOM = 0.35;
-        renderZone(); saveZone();
+    // ratio tabs
+    var tabs = document.querySelectorAll(".gz-tab");
+    for (var i = 0; i < tabs.length; i++) {
+      (function (tab) {
+        tab.addEventListener("click", function () {
+          curRatio = tab.getAttribute("data-ratio");
+          renderGuide();
+        });
+      })(tabs[i]);
+    }
+    var gy = document.getElementById("guideY");
+    if (gy) { gy.addEventListener("change", function () { setGuideY((parseFloat(gy.value) || 0) / 100); }); }
+    initGuideDrag();
+
+    var lm = document.getElementById("logomargin");
+    if (lm) {
+      lm.value = window.RSZ_LOGO_MARGIN;
+      lm.addEventListener("change", function () {
+        var v = parseFloat(lm.value);
+        if (isNaN(v) || v < 0) { v = 0; }
+        if (v > 400) { v = 400; }
+        window.RSZ_LOGO_MARGIN = v;
+        lm.value = v;
+        window.localStorage.setItem(LOGO_MARGIN_KEY, String(v));
       });
     }
-    renderZone();
+    renderGuide();
 
     if (gear) { gear.addEventListener("click", function () { showSettings(true); }); }
     if (back) { back.addEventListener("click", function () { showSettings(false); }); }

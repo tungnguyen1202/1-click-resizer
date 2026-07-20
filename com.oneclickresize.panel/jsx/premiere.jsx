@@ -13,14 +13,12 @@
 // │ NATIVE_SIZE = UNAVAILABLE  // getXMPMetadata() exposes stDim:w/h for only │
 // │   SOME clips (a few .mp4/.mov); most .mp4, ALL .png, .aep, .aegraphic     │
 // │   return no dimensions. Coverage-by-native-size is therefore infeasible.  │
-// │ CLASSIFICATION (revised, native-size-free): overlay SCALE is never        │
-// │   touched; overlay POSITION is rewritten only by the 9:16 safe-zone clamp │
-// │   (RSZ_clampClipToSafe). Non-graphic clips on the background track        │
-// │   (default V1) get a FILL scale-up by cover math over BOTH axes:          │
-// │   scale * max(1, tgtW/srcW, tgtH/srcH) — width matters because detectRatio│
-// │   accepts any aspect-matching resolution (e.g. 720x1280). Background      │
-// │   Position is never rewritten. Graphics (.aegraphic / "Graphics"          │
-// │   component) are never scaled.                                            │
+// │ REPOSITION MODEL (native-size-free): overlay SCALE is never touched.      │
+// │   • Logo (clip name contains "Logo"): pin Y to its nearer edge, marginPx  │
+// │     away (keep X). • Text/graphic/MOGRT (Graphics component): snap Y to    │
+// │   the target ratio's guide line (keep X). • Background track (default V1): │
+// │   FILL scale-up by cover math over BOTH axes scale*max(1,tgtW/srcW,        │
+// │   tgtH/srcH). Everything else on overlay tracks is left untouched.         │
 // │ NOTE: v1 operates on the fixed Motion effect only (find component by      │
 // │   displayName "Motion"; props by displayName "Scale"/"Position").         │
 // └────────────────────────────────────────────────────────────────────────┘
@@ -210,17 +208,34 @@ function RSZ_applyFill(clip, srcW, srcH, tgtW, tgtH) {
   return true;
 }
 
-// Clamp an overlay clip's normalized Motion Position into the safe-zone
-// rectangle. Only moves clips whose position falls outside the zone.
-function RSZ_clampClipToSafe(clip, left, right, top, bottom) {
+function RSZ_isLogoClip(clip) {
+  return !!(clip.name && String(clip.name).toLowerCase().indexOf("logo") !== -1);
+}
+
+// Set an overlay clip's vertical Motion Position, keeping X and Scale.
+// Returns true if it moved.
+function RSZ_setClipY(clip, newY) {
   var motion = RSZ_findComponent(clip, "Motion");
   if (!motion) { return false; }
   var posProp = RSZ_findProp(motion, "Position");
   if (!posProp) { return false; }
   var pos = posProp.getValue(); // [x, y] normalized
-  var r = RSZ.clampToSafe(pos[0], pos[1], left, right, top, bottom);
-  if (r.changed) { posProp.setValue([r.x, r.y], true); return true; }
-  return false;
+  if (pos[1] === newY) { return false; }
+  posProp.setValue([pos[0], newY], true);
+  return true;
+}
+
+// Pin a logo to its nearer edge (keep X + Scale).
+function RSZ_repositionLogo(clip, frameH, marginPx) {
+  var motion = RSZ_findComponent(clip, "Motion");
+  if (!motion) { return false; }
+  var posProp = RSZ_findProp(motion, "Position");
+  if (!posProp) { return false; }
+  var pos = posProp.getValue();
+  var ny = RSZ.edgePinY(pos[1], frameH, marginPx);
+  if (pos[1] === ny) { return false; }
+  posProp.setValue([pos[0], ny], true);
+  return true;
 }
 
 // Make a sequence the active one — assignment first, openSequence as fallback
@@ -239,21 +254,20 @@ function RSZ_makeActive(seq) {
 // ---- orchestration ---------------------------------------------------------
 
 // Args (all numbers): bgTrack = 1-based background track (default 1);
-// safeTop / safeBottom = safe-zone margin fractions from the top / bottom edge
-// (defaults 0.12 / 0.22), used only when the target ratio is 9-16.
+// guide9/guide45/guide11 = the text guide Y (normalized 0..1) per ratio
+// (default 0.5 = centre); logoMargin = logo edge margin in px (default 50).
+// Overlays keep their Scale: text/graphic/MOGRT snap to the target ratio's
+// guide Y (X unchanged); logos pin to their nearer edge, marginPx away.
 // Returns a hand-built JSON string (no JSON global in ExtendScript). Each
 // target is isolated in try/catch so one failure still returns well-formed
 // results and always restores the original active sequence.
-function RSZ_runResizeAll(bgTrack, safeTop, safeBottom) {
+function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11, logoMargin) {
   bgTrack = parseInt(bgTrack, 10);
   if (!bgTrack || bgTrack < 1) { bgTrack = 1; }
-  safeTop = parseFloat(safeTop);
-  safeBottom = parseFloat(safeBottom);
-  if (isNaN(safeTop) || safeTop < 0 || safeTop > 0.45) { safeTop = 0.12; }
-  if (isNaN(safeBottom) || safeBottom < 0 || safeBottom > 0.45) { safeBottom = 0.22; }
-  var safeLeft = 0.05, safeRight = 0.95;
-  var zoneTop = safeTop;
-  var zoneBottom = 1 - safeBottom;
+  function guideOf(v) { v = parseFloat(v); return isNaN(v) ? 0.5 : RSZ.clamp01(v); }
+  var guideByRatio = { "9-16": guideOf(guide9), "4-5": guideOf(guide45), "1-1": guideOf(guide11) };
+  logoMargin = parseFloat(logoMargin);
+  if (isNaN(logoMargin) || logoMargin < 0) { logoMargin = 50; }
 
   var info = RSZ_activeInfoObj();
   if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
@@ -288,14 +302,14 @@ function RSZ_runResizeAll(bgTrack, safeTop, safeBottom) {
       } else {
         dup.name = RSZ.buildName(baseName, tgtRatio);
 
-        var scaled = 0;   // background clips scaled up
-        var moved = 0;    // overlay clips pulled into the safe zone
+        var scaled = 0;   // background clips scaled to fill
+        var moved = 0;    // overlays repositioned (guide / logo pin)
         var bgIndex = bgTrack - 1;
         // If the configured background track doesn't exist on this sequence
         // (e.g. a setting left over from a larger project), fall back to V1 so
-        // the real background is never mistaken for an overlay and clamped.
+        // the real background is never mistaken for an overlay.
         if (bgIndex < 0 || bgIndex >= dup.videoTracks.numTracks) { bgIndex = 0; }
-        var doSafe = (tgtRatio === "9-16"); // Reels safe zone only for 9:16
+        var guideY = guideByRatio[tgtRatio];
 
         for (var vt = 0; vt < dup.videoTracks.numTracks; vt++) {
           var track = dup.videoTracks[vt];
@@ -307,11 +321,12 @@ function RSZ_runResizeAll(bgTrack, safeTop, safeBottom) {
               if (!RSZ_isGraphicClip(clip)) {
                 try { if (RSZ_applyFill(clip, srcW, srcH, tgt.w, tgt.h)) { scaled++; } } catch (ce) {}
               }
-            } else if (doSafe) {
-              // Overlay: keep it inside the Reels safe zone.
-              try {
-                if (RSZ_clampClipToSafe(clip, safeLeft, safeRight, zoneTop, zoneBottom)) { moved++; }
-              } catch (se) {}
+            } else if (RSZ_isLogoClip(clip)) {
+              // Logo: keep Scale, pin to its nearer edge (marginPx away).
+              try { if (RSZ_repositionLogo(clip, tgt.h, logoMargin)) { moved++; } } catch (le) {}
+            } else if (RSZ_isGraphicClip(clip)) {
+              // Text / graphic / MOGRT: keep Scale, snap Y to this ratio's guide.
+              try { if (RSZ_setClipY(clip, guideY)) { moved++; } } catch (se) {}
             }
           }
         }

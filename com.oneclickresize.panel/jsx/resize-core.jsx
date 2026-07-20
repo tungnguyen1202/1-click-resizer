@@ -62,20 +62,16 @@ var RSZ = (function () {
     return currentScale * factor;
   }
 
-  function clampVal(v, lo, hi) {
-    if (lo > hi) { var t = lo; lo = hi; hi = t; }
-    if (v < lo) { return lo; }
-    if (v > hi) { return hi; }
-    return v;
-  }
+  function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
-  // Clamp a normalized position [x,y] into the safe-zone rectangle. Returns
-  // { x, y, changed } — `changed` is true if either coordinate moved (so the
-  // caller can skip a needless setValue). Only positions OUTSIDE the zone move.
-  function clampToSafe(x, y, left, right, top, bottom) {
-    var nx = clampVal(x, left, right);
-    var ny = clampVal(y, top, bottom);
-    return { x: nx, y: ny, changed: (nx !== x || ny !== y) };
+  // Pin a logo vertically: keep whichever edge it's nearer to, marginPx away.
+  // Returns a normalized y. Anchor-based (Premiere gives no element size), so
+  // marginPx is the anchor's distance from the edge.
+  function edgePinY(currentY, frameHeight, marginPx) {
+    if (!(frameHeight > 0)) { return currentY; }
+    var m = marginPx / frameHeight;
+    if (m > 0.49) { m = 0.49; }
+    return (currentY < 0.5) ? m : (1 - m);
   }
 
   return {
@@ -86,7 +82,8 @@ var RSZ = (function () {
     stripTrailingRatioLabel: stripTrailingRatioLabel,
     buildName: buildName,
     fillScale: fillScale,
-    clampToSafe: clampToSafe
+    clamp01: clamp01,
+    edgePinY: edgePinY
   };
 })();
 
