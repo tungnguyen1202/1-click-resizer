@@ -250,6 +250,13 @@
 
   // ---- Text guide editor (one horizontal guide line per ratio) -----------
   var RATIO_ASPECT = { "9-16": 1920 / 1080, "4-5": 1350 / 1080, "1-1": 1 };
+  // Reference safe-zone insets (fraction of the frame) shown as a faint box to
+  // help align the guide line. 9:16 ~ Reels; 4:5 / 1:1 a modest inset.
+  var SAFE_REF = {
+    "9-16": { top: 0.12, bottom: 0.33, side: 0.06 },
+    "4-5":  { top: 0.08, bottom: 0.10, side: 0.06 },
+    "1-1":  { top: 0.08, bottom: 0.12, side: 0.06 }
+  };
   var GZ_WIDTH = 92; // px; frame height = width * aspect
   var curRatio = "9-16";
 
@@ -263,6 +270,14 @@
     var input = document.getElementById("guideY");
     var y = window.RSZ_GUIDE[curRatio];
     if (frame) { frame.style.height = Math.round(GZ_WIDTH * RATIO_ASPECT[curRatio]) + "px"; }
+    var safe = document.getElementById("gzsafe");
+    var sr = SAFE_REF[curRatio];
+    if (safe && sr) {
+      safe.style.top = (sr.top * 100) + "%";
+      safe.style.bottom = (sr.bottom * 100) + "%";
+      safe.style.left = (sr.side * 100) + "%";
+      safe.style.right = (sr.side * 100) + "%";
+    }
     if (line) { line.style.top = (y * 100) + "%"; }
     if (input && document.activeElement !== input) { input.value = Math.round(y * 100); }
     var tabs = document.querySelectorAll(".gz-tab");

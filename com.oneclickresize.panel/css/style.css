@@ -111,7 +111,8 @@ svg{display:block}
 .gz-tab.active{color:var(--accent);border-color:#1d5236;background:var(--accent-deep)}
 .gzedit{display:flex;gap:16px;align-items:flex-start;margin-top:12px}
 .gzframe{position:relative;width:92px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;transition:height .12s ease}
-.gzline{position:absolute;left:0;right:0;height:14px;margin-top:-7px;cursor:row-resize}
+.gzsafe{position:absolute;border:1px dashed rgba(120,170,255,0.55);background:rgba(120,170,255,0.08);border-radius:3px;pointer-events:none}
+.gzline{position:absolute;left:0;right:0;height:14px;margin-top:-7px;cursor:row-resize;z-index:2}
 .gzline::after{content:"";position:absolute;left:0;right:0;top:6px;height:2px;background:var(--accent)}
 .gzline::before{content:"";position:absolute;left:50%;top:2px;transform:translateX(-50%);width:24px;height:10px;border-radius:3px;background:rgba(53,224,126,0.25)}
 .gzfields{display:flex;flex-direction:column;gap:12px;flex:1;padding-top:2px}

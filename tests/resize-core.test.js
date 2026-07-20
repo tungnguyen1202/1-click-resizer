@@ -39,16 +39,23 @@ test("stripTrailingRatioLabel removes only a trailing known label", () => {
   assert.strictEqual(RSZ.stripTrailingRatioLabel("9-16 master"), "9-16 master");
   // must not strip a bracketed tag that merely contains digits
   assert.strictEqual(RSZ.stripTrailingRatioLabel("vid17.0 [tung]"), "vid17.0 [tung]");
+  // strips the new x-style labels too
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 9x16"), "Clip");
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 1x1"), "Clip");
   // tolerates accidental trailing spaces from manual renames
   assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 9-16 "), "Clip");
-  assert.strictEqual(RSZ.buildName("Clip 9-16 ", "4-5"), "Clip 4-5");
+  assert.strictEqual(RSZ.buildName("Clip 9x16 ", "4-5"), "Clip 4x5");
 });
 
-test("buildName copies base name and appends target label", () => {
+test("buildName appends the x-style label and swaps any prior label", () => {
   var base = "Brand vid17.0 [editor.a][editor.b]";
-  assert.strictEqual(RSZ.buildName(base, "4-5"), base + " 4-5");
-  // re-resizing an already-labelled sequence swaps the label, no stacking
-  assert.strictEqual(RSZ.buildName(base + " 9-16", "1-1"), base + " 1-1");
+  assert.strictEqual(RSZ.buildName(base, "4-5"), base + " 4x5");
+  assert.strictEqual(RSZ.buildName(base, "9-16"), base + " 9x16");
+  assert.strictEqual(RSZ.buildName(base, "1-1"), base + " 1x1");
+  // swaps a prior x-style label (no stacking)
+  assert.strictEqual(RSZ.buildName(base + " 9x16", "1-1"), base + " 1x1");
+  // also swaps a legacy dash label from older versions
+  assert.strictEqual(RSZ.buildName(base + " 4-5", "9-16"), base + " 9x16");
 });
 
 test("fillScale covers the target frame on both axes, never scales down", () => {
@@ -71,17 +78,17 @@ test("fillScale covers the target frame on both axes, never scales down", () => 
   assert.strictEqual(RSZ.fillScale(100, -10, 1920, 1080, 1920), 100);
 });
 
-test("edgePinY keeps the nearer edge, marginPx away (normalized)", () => {
-  // top half -> pinned marginPx from the top; 50/1920 ≈ 0.026
-  assert.ok(Math.abs(RSZ.edgePinY(0.2, 1920, 50) - 0.026) < 0.001);
-  // bottom half -> pinned marginPx from the bottom; 1 - 50/1920 ≈ 0.974
-  assert.ok(Math.abs(RSZ.edgePinY(0.9, 1920, 50) - 0.974) < 0.001);
-  // same 50px is a bigger fraction on a shorter frame (1080): 50/1080 ≈ 0.046
-  assert.ok(Math.abs(RSZ.edgePinY(0.1, 1080, 50) - 0.046) < 0.001);
-  // exactly center counts as bottom half (>= 0.5)
-  assert.ok(RSZ.edgePinY(0.5, 1080, 50) > 0.5);
-  // degenerate height -> unchanged
-  assert.strictEqual(RSZ.edgePinY(0.3, 0, 50), 0.3);
+test("insetClamp keeps a coord inside a uniform margin box", () => {
+  var m = 50 / 1080; // ≈ 0.046
+  // already inside -> unchanged
+  assert.strictEqual(RSZ.insetClamp(0.5, m), 0.5);
+  // too close to the near edge -> pushed in to the margin
+  assert.ok(Math.abs(RSZ.insetClamp(0.01, m) - m) < 1e-9);
+  // too close to the far edge -> pushed in to 1 - margin
+  assert.ok(Math.abs(RSZ.insetClamp(0.99, m) - (1 - m)) < 1e-9);
+  // absurd margin is capped at 0.49 so the band never inverts
+  assert.ok(Math.abs(RSZ.insetClamp(0.1, 0.9) - 0.49) < 1e-9);
+  assert.ok(Math.abs(RSZ.insetClamp(0.9, 0.9) - 0.51) < 1e-9);
 });
 
 test("clamp01 keeps values in [0,1]", () => {

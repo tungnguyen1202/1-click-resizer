@@ -6,6 +6,11 @@ var RSZ = (function () {
     "1-1":  { w: 1080, h: 1080 }
   };
   var ORDER = ["9-16", "4-5", "1-1"];
+  // Internal ratio keys stay "9-16"; the name suffix uses the "x" style.
+  var LABELS = { "9-16": "9x16", "4-5": "4x5", "1-1": "1x1" };
+  // Every trailing label we recognise when stripping (new + legacy dash form),
+  // so re-resizing a file named either way swaps cleanly.
+  var STRIP_SUFFIXES = ["9x16", "4x5", "1x1", "9-16", "4-5", "1-1"];
 
   function aspectOf(w, h) { return w / h; }
 
@@ -35,8 +40,8 @@ var RSZ = (function () {
     while (name.length && name.charAt(name.length - 1) === " ") {
       name = name.substring(0, name.length - 1);
     }
-    for (var i = 0; i < ORDER.length; i++) {
-      var suffix = " " + ORDER[i];
+    for (var i = 0; i < STRIP_SUFFIXES.length; i++) {
+      var suffix = " " + STRIP_SUFFIXES[i];
       if (name.length >= suffix.length &&
           name.substring(name.length - suffix.length) === suffix) {
         return name.substring(0, name.length - suffix.length);
@@ -45,8 +50,10 @@ var RSZ = (function () {
     return name;
   }
 
+  // targetLabel is an internal ratio key ("9-16"); the suffix uses LABELS.
   function buildName(originalName, targetLabel) {
-    return stripTrailingRatioLabel(originalName) + " " + targetLabel;
+    var suffix = LABELS[targetLabel] || targetLabel;
+    return stripTrailingRatioLabel(originalName) + " " + suffix;
   }
 
   // Cover math over BOTH axes: the factor that keeps a frame-filling clip
@@ -64,26 +71,27 @@ var RSZ = (function () {
 
   function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
-  // Pin a logo vertically: keep whichever edge it's nearer to, marginPx away.
-  // Returns a normalized y. Anchor-based (Premiere gives no element size), so
-  // marginPx is the anchor's distance from the edge.
-  function edgePinY(currentY, frameHeight, marginPx) {
-    if (!(frameHeight > 0)) { return currentY; }
-    var m = marginPx / frameHeight;
-    if (m > 0.49) { m = 0.49; }
-    return (currentY < 0.5) ? m : (1 - m);
+  // Keep a normalized coord at least `margin` from both edges (0 and 1).
+  // Used to hold a logo inside a uniform margin box (anchor-based, since
+  // Premiere gives no element size).
+  function insetClamp(v, margin) {
+    if (margin > 0.49) { margin = 0.49; }
+    if (v < margin) { return margin; }
+    if (v > 1 - margin) { return 1 - margin; }
+    return v;
   }
 
   return {
     RATIOS: RATIOS,
     ORDER: ORDER,
+    LABELS: LABELS,
     detectRatio: detectRatio,
     otherRatios: otherRatios,
     stripTrailingRatioLabel: stripTrailingRatioLabel,
     buildName: buildName,
     fillScale: fillScale,
     clamp01: clamp01,
-    edgePinY: edgePinY
+    insetClamp: insetClamp
   };
 })();
 

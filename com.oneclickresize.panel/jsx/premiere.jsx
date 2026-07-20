@@ -14,8 +14,8 @@
 // │   SOME clips (a few .mp4/.mov); most .mp4, ALL .png, .aep, .aegraphic     │
 // │   return no dimensions. Coverage-by-native-size is therefore infeasible.  │
 // │ REPOSITION MODEL (native-size-free): overlay SCALE is never touched.      │
-// │   • Logo (clip name contains "Logo"): pin Y to its nearer edge, marginPx  │
-// │     away (keep X). • Text/graphic/MOGRT (Graphics component): snap Y to    │
+// │   • Logo (clip name contains "Logo"): keep inside a marginPx box on all   │
+// │     4 edges (keep X/Y unless within margin). • Text/graphic/MOGRT: snap Y  │
 // │   the target ratio's guide line (keep X). • Background track (default V1): │
 // │   FILL scale-up by cover math over BOTH axes scale*max(1,tgtW/srcW,        │
 // │   tgtH/srcH). Everything else on overlay tracks is left untouched.         │
@@ -225,16 +225,19 @@ function RSZ_setClipY(clip, newY) {
   return true;
 }
 
-// Pin a logo to its nearer edge (keep X + Scale).
-function RSZ_repositionLogo(clip, frameH, marginPx) {
+// Keep a logo inside a uniform marginPx box on all four edges (keep Scale).
+// Only moves it if it's closer than marginPx to an edge, so a logo already
+// nicely placed stays put — this fixes logos jammed against the top edge.
+function RSZ_repositionLogo(clip, frameW, frameH, marginPx) {
   var motion = RSZ_findComponent(clip, "Motion");
   if (!motion) { return false; }
   var posProp = RSZ_findProp(motion, "Position");
   if (!posProp) { return false; }
   var pos = posProp.getValue();
-  var ny = RSZ.edgePinY(pos[1], frameH, marginPx);
-  if (pos[1] === ny) { return false; }
-  posProp.setValue([pos[0], ny], true);
+  var nx = RSZ.insetClamp(pos[0], marginPx / frameW);
+  var ny = RSZ.insetClamp(pos[1], marginPx / frameH);
+  if (pos[0] === nx && pos[1] === ny) { return false; }
+  posProp.setValue([nx, ny], true);
   return true;
 }
 
@@ -322,8 +325,8 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11, logoMargin) {
                 try { if (RSZ_applyFill(clip, srcW, srcH, tgt.w, tgt.h)) { scaled++; } } catch (ce) {}
               }
             } else if (RSZ_isLogoClip(clip)) {
-              // Logo: keep Scale, pin to its nearer edge (marginPx away).
-              try { if (RSZ_repositionLogo(clip, tgt.h, logoMargin)) { moved++; } } catch (le) {}
+              // Logo: keep Scale, hold inside a 50px margin box (all edges).
+              try { if (RSZ_repositionLogo(clip, tgt.w, tgt.h, logoMargin)) { moved++; } } catch (le) {}
             } else if (RSZ_isGraphicClip(clip)) {
               // Text / graphic / MOGRT: keep Scale, snap Y to this ratio's guide.
               try { if (RSZ_setClipY(clip, guideY)) { moved++; } } catch (se) {}

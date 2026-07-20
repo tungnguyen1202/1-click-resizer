@@ -18,20 +18,20 @@ currently open in the timeline. The source block shows which one it's using
 ## What one click does
 
 From the source sequence, **RESIZE** creates the two remaining ratios as new
-sequences (e.g. from 9:16 → `… 4-5` and `… 1-1`):
+sequences (e.g. from 9:16 → `… 4x5` and `… 1x1`):
 
 - **Duplicate** the sequence (the original is never modified).
 - **Frame size** set to the target (all 1080 wide: 9:16 = 1080×1920, 4:5 =
   1080×1350, 1:1 = 1080×1080). Frame rate preserved.
 - **Rename**: original name, trailing ratio label swapped, new label appended
-  with a space — `MyClip 9-16` → `MyClip 4-5`.
+  with a space — `MyClip 9x16` → `MyClip 4x5`.
 - **Background** (clips on the background track, default V1, that aren't
   graphics): scaled up to keep covering **only when the target is taller**
   (e.g. 1:1 → 9:16). Going to a shorter frame needs no change.
 - **Text / graphic / MOGRT**: scale kept; vertical position set to the target
   ratio's guide line (Settings; default centre), horizontal position kept.
-- **Logo** (clip name contains "Logo"): scale kept; pinned to its nearer edge
-  (top/bottom) by the configured px margin.
+- **Logo** (clip name contains "Logo"): scale kept; held at least the configured
+  px margin inside all four edges (only moved if it's closer than that).
 - **Other overlays**: left as-is.
 - **Audio** is never touched.
 
@@ -65,8 +65,7 @@ then offers the update on next open.
   where text/graphics/MOGRT sit vertically for that ratio (default centre).
   Their scale is never changed; horizontal position is kept.
 - **Logo — edge margin (px)** — clips whose name contains "Logo" keep their
-  scale and are pinned this many px from whichever edge (top/bottom) they're
-  nearer to, in every ratio.
+  scale and are held at least this many px inside every edge (all ratios).
 - **AUTO** (badge next to ⟳) is realtime detection: the panel polls Premiere
   ~every 0.3s and updates the source info the moment you switch sequences.
   Click it to toggle off (persisted); the **⟳ Refresh** button always works
@@ -130,7 +129,7 @@ Taller (1:1 or 4:5 → 9:16):
 - [ ] Text/graphics sit on the guide line; logos pinned to their edge (tune in Settings).
 
 General:
-- [ ] Re-running on an already-labelled sequence swaps the label (no `… 9-16 4-5`).
+- [ ] Re-running on an already-labelled sequence swaps the label (no `… 9x16 4x5`).
 - [ ] ⟳ Refresh re-detects the ratio after switching sequences.
 
 ## Known limitations (v1)
@@ -160,7 +159,7 @@ com.oneclickresize.panel/
   js/CSInterface.js     Adobe bridge (vendored)
   js/main.js            panel controller (no business logic)
   js/updater.js         in-panel auto-update (git fetch/pull; needs clone+symlink install)
-  jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, edgePinY) — Node-tested
+  jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, insetClamp) — Node-tested
   jsx/premiere.jsx      Premiere DOM layer (#includes resize-core)
 ```
 
