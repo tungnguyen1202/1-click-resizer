@@ -78,19 +78,6 @@ test("fillScale covers the target frame on both axes, never scales down", () => 
   assert.strictEqual(RSZ.fillScale(100, -10, 1920, 1080, 1920), 100);
 });
 
-test("insetClamp keeps a coord inside a uniform margin box", () => {
-  var m = 50 / 1080; // ≈ 0.046
-  // already inside -> unchanged
-  assert.strictEqual(RSZ.insetClamp(0.5, m), 0.5);
-  // too close to the near edge -> pushed in to the margin
-  assert.ok(Math.abs(RSZ.insetClamp(0.01, m) - m) < 1e-9);
-  // too close to the far edge -> pushed in to 1 - margin
-  assert.ok(Math.abs(RSZ.insetClamp(0.99, m) - (1 - m)) < 1e-9);
-  // absurd margin is capped at 0.49 so the band never inverts
-  assert.ok(Math.abs(RSZ.insetClamp(0.1, 0.9) - 0.49) < 1e-9);
-  assert.ok(Math.abs(RSZ.insetClamp(0.9, 0.9) - 0.51) < 1e-9);
-});
-
 test("isLogoName detects the team's logo naming conventions", () => {
   // core hints: "logo" and "fav" (covers fav vid / fav video / favicon)
   assert.strictEqual(RSZ.isLogoName("Logo"), true);

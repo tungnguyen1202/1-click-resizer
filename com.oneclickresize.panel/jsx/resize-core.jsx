@@ -86,16 +86,6 @@ var RSZ = (function () {
 
   function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
-  // Keep a normalized coord at least `margin` from both edges (0 and 1).
-  // Used to hold a logo inside a uniform margin box (anchor-based, since
-  // Premiere gives no element size).
-  function insetClamp(v, margin) {
-    if (margin > 0.49) { margin = 0.49; }
-    if (v < margin) { return margin; }
-    if (v > 1 - margin) { return 1 - margin; }
-    return v;
-  }
-
   return {
     RATIOS: RATIOS,
     ORDER: ORDER,
@@ -106,7 +96,6 @@ var RSZ = (function () {
     buildName: buildName,
     fillScale: fillScale,
     clamp01: clamp01,
-    insetClamp: insetClamp,
     LOGO_NAME_HINTS: LOGO_NAME_HINTS,
     isLogoName: isLogoName
   };

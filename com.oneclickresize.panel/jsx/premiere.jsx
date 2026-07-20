@@ -239,22 +239,6 @@ function RSZ_setClipY(clip, newY) {
   return true;
 }
 
-// Keep a logo inside a uniform marginPx box on all four edges (keep Scale).
-// Only moves it if it's closer than marginPx to an edge, so a logo already
-// nicely placed stays put — this fixes logos jammed against the top edge.
-function RSZ_repositionLogo(clip, frameW, frameH, marginPx) {
-  var motion = RSZ_findComponent(clip, "Motion");
-  if (!motion) { return false; }
-  var posProp = RSZ_findProp(motion, "Position");
-  if (!posProp) { return false; }
-  var pos = posProp.getValue();
-  var nx = RSZ.insetClamp(pos[0], marginPx / frameW);
-  var ny = RSZ.insetClamp(pos[1], marginPx / frameH);
-  if (pos[0] === nx && pos[1] === ny) { return false; }
-  posProp.setValue([nx, ny], true);
-  return true;
-}
-
 // Make a sequence the active one — assignment first, openSequence as fallback
 // (needed when the source was picked in the Project panel but not open).
 function RSZ_makeActive(seq) {
@@ -272,19 +256,18 @@ function RSZ_makeActive(seq) {
 
 // Args (all numbers): bgTrack = 1-based background track (default 1);
 // guide9/guide45/guide11 = the text guide Y (normalized 0..1) per ratio
-// (default 0.5 = centre); logoMargin = logo edge margin in px (default 50).
-// Overlays keep their Scale: text/graphic/MOGRT snap to the target ratio's
-// guide Y (X unchanged); logos pin to their nearer edge, marginPx away.
+// (default 0.5 = centre). Overlays keep their Scale: text/graphic/MOGRT snap to
+// the target ratio's guide Y (X unchanged). Logos (name matched by isLogoName)
+// are LEFT UNTOUCHED — the editor positions them by hand — but are still
+// detected so they never get swept up by the text-guide branch.
 // Returns a hand-built JSON string (no JSON global in ExtendScript). Each
 // target is isolated in try/catch so one failure still returns well-formed
 // results and always restores the original active sequence.
-function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11, logoMargin) {
+function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
   bgTrack = parseInt(bgTrack, 10);
   if (!bgTrack || bgTrack < 1) { bgTrack = 1; }
   function guideOf(v) { v = parseFloat(v); return isNaN(v) ? 0.5 : RSZ.clamp01(v); }
   var guideByRatio = { "9-16": guideOf(guide9), "4-5": guideOf(guide45), "1-1": guideOf(guide11) };
-  logoMargin = parseFloat(logoMargin);
-  if (isNaN(logoMargin) || logoMargin < 0) { logoMargin = 50; }
 
   var info = RSZ_activeInfoObj();
   if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
@@ -348,9 +331,9 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11, logoMargin) {
                 try { if (RSZ_applyFill(clip, srcW, srcH, tgt.w, tgt.h)) { sc = true; scaled++; } } catch (ce) {}
               }
             } else if (RSZ_isLogoClip(clip)) {
-              // Logo: keep Scale, hold inside a 50px margin box (all edges).
+              // Logo: left exactly as-is (the editor positions it by hand).
+              // Detected only so it isn't snapped to the text guide below.
               kind = "logo";
-              try { if (RSZ_repositionLogo(clip, tgt.w, tgt.h, logoMargin)) { mv = true; moved++; } } catch (le) {}
             } else if (RSZ_isGraphicClip(clip)) {
               // Text / graphic / MOGRT: keep Scale, snap Y to this ratio's guide.
               kind = "graphic";

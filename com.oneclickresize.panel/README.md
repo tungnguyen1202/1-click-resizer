@@ -159,7 +159,7 @@ com.oneclickresize.panel/
   js/CSInterface.js     Adobe bridge (vendored)
   js/main.js            panel controller (no business logic)
   js/updater.js         in-panel auto-update (git fetch/pull; needs clone+symlink install)
-  jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, insetClamp) — Node-tested
+  jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, isLogoName) — Node-tested
   jsx/premiere.jsx      Premiere DOM layer (#includes resize-core)
 ```
 

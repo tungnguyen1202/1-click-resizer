@@ -212,10 +212,9 @@
     var bg = parseInt(window.RSZ_BG_TRACK, 10) || 1;
     var g = window.RSZ_GUIDE || {};
     var g9 = gnum(g["9-16"], 0.5), g45 = gnum(g["4-5"], 0.5), g11 = gnum(g["1-1"], 0.5);
-    var lm = (typeof window.RSZ_LOGO_MARGIN === "number" && !isNaN(window.RSZ_LOGO_MARGIN)) ? window.RSZ_LOGO_MARGIN : 50;
     setStatus("Đang xử lý…");
     ensureJsx(function () {
-      evalAsync('RSZ_runResizeAll(' + bg + ',' + g9 + ',' + g45 + ',' + g11 + ',' + lm + ')', function (res) {
+      evalAsync('RSZ_runResizeAll(' + bg + ',' + g9 + ',' + g45 + ',' + g11 + ')', function (res) {
         btn.disabled = false;
         setBusy(false);
         var payload = null;
@@ -247,7 +246,6 @@
 
   var BG_TRACK_KEY = "rsz.bgTrack";
   var GUIDE_KEY = "rsz.guideY";       // JSON {"9-16":..,"4-5":..,"1-1":..}
-  var LOGO_MARGIN_KEY = "rsz.logoMargin";
 
   function gnum(v, def) {
     v = parseFloat(v);
@@ -266,8 +264,6 @@
     } catch (e) {}
     return d;
   })();
-  window.RSZ_LOGO_MARGIN = parseFloat(window.localStorage.getItem(LOGO_MARGIN_KEY) || "50");
-  if (isNaN(window.RSZ_LOGO_MARGIN) || window.RSZ_LOGO_MARGIN < 0) { window.RSZ_LOGO_MARGIN = 50; }
 
   function showSettings(show) {
     var main = document.getElementById("main-view");
@@ -369,19 +365,6 @@
     var gy = document.getElementById("guideY");
     if (gy) { gy.addEventListener("change", function () { setGuideY((parseFloat(gy.value) || 0) / 100); }); }
     initGuideDrag();
-
-    var lm = document.getElementById("logomargin");
-    if (lm) {
-      lm.value = window.RSZ_LOGO_MARGIN;
-      lm.addEventListener("change", function () {
-        var v = parseFloat(lm.value);
-        if (isNaN(v) || v < 0) { v = 0; }
-        if (v > 400) { v = 400; }
-        window.RSZ_LOGO_MARGIN = v;
-        lm.value = v;
-        window.localStorage.setItem(LOGO_MARGIN_KEY, String(v));
-      });
-    }
     renderGuide();
 
     if (gear) { gear.addEventListener("click", function () { showSettings(true); }); }
