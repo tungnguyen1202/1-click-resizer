@@ -8,6 +8,11 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/tungnguyen1202/1-click-resizer/releases/latest"><img src="https://img.shields.io/github/v/release/tungnguyen1202/1-click-resizer?label=version&color=2ea043" alt="Latest version" /></a>
+  <img src="https://img.shields.io/github/last-commit/tungnguyen1202/1-click-resizer/main?color=2ea043" alt="Last commit" />
+</p>
+
+<p align="center">
   <a href="https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip"><b>⬇️ Download installer (.zip)</b></a>
   &nbsp;·&nbsp;
   <a href="#-tiếng-việt">🇻🇳 Tiếng Việt</a>

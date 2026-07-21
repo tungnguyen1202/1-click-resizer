@@ -74,3 +74,24 @@ git add -A
 git commit -m "$msg (v$new)"
 git push origin main
 echo "✅ Published v$new and pushed to GitHub."
+
+# --- Cut a matching GitHub release ------------------------------------------------
+# Keeps the Releases page's "Latest" label and the stable
+# /releases/latest/download/1-Click-Resizer-Installer.zip URL tracking main every
+# time. The installer embeds a self-updating clone, so rebuilding is cheap
+# insurance; the release just needs to carry the zip so the latest-download URL
+# resolves. Runs AFTER the push, so a release hiccup never blocks the code update.
+if command -v gh >/dev/null 2>&1; then
+  echo "→ Building installer + publishing release v$new …"
+  if ./build-installer.sh \
+     && gh release create "v$new" "dist/1-Click-Resizer-Installer.zip" \
+          --title "1-Click Resizer v$new" --notes "$msg" --latest; then
+    echo "✅ Release v$new published — Releases page + latest-download URL now show v$new."
+  else
+    echo "⚠️  Code IS pushed, but the GitHub release for v$new did not publish."
+    echo "    Finish it manually with:"
+    echo "    ./build-installer.sh && gh release create v$new dist/1-Click-Resizer-Installer.zip --title \"1-Click Resizer v$new\" --notes \"$msg\" --latest"
+  fi
+else
+  echo "⚠️  gh CLI not found — code pushed, but the Releases page was NOT updated."
+fi
