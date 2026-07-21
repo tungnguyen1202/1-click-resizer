@@ -17,6 +17,7 @@ cd "$(dirname "$0")"
 VJSON="version.json"
 MANIFEST="com.oneclickresize.panel/CSXS/manifest.xml"
 INDEX="com.oneclickresize.panel/index.html"
+SHOT="media/_shot.html"          # README hero demo (its version label + rerender)
 
 # --- Guards: right branch, up to date with origin -----------------------------
 branch=$(git symbolic-ref --short -q HEAD) || { echo "❌ Detached HEAD — check out main before publishing."; exit 1; }
@@ -61,13 +62,19 @@ sed -i '' "s/\"version\"[[:space:]]*:[[:space:]]*\"[0-9.]*\"/\"version\": \"$new
 sed -i '' "s/ExtensionBundleVersion=\"[0-9.]*\"/ExtensionBundleVersion=\"$new\"/" "$MANIFEST"
 sed -i '' "s/\(<Extension Id=\"com.oneclickresize.panel.main\" Version=\)\"[0-9.]*\"/\1\"$new\"/" "$MANIFEST"
 sed -i '' "s#<b>V[0-9.]*</b>#<b>V$new</b>#" "$INDEX"
+sed -i '' "s#<b>V[0-9.]*</b>#<b>V$new</b>#" "$SHOT"
 
 # Verify every stamp landed (sed exits 0 even on zero matches).
-verify_fail() { echo "❌ Version stamp failed in $1 — reverting stamps, aborting."; git checkout -- "$VJSON" "$MANIFEST" "$INDEX"; exit 1; }
+verify_fail() { echo "❌ Version stamp failed in $1 — reverting stamps, aborting."; git checkout -- "$VJSON" "$MANIFEST" "$INDEX" "$SHOT"; exit 1; }
 grep -q "\"version\": \"$new\"" "$VJSON" || verify_fail "$VJSON"
 grep -q "ExtensionBundleVersion=\"$new\"" "$MANIFEST" || verify_fail "$MANIFEST (bundle)"
 grep -q "<Extension Id=\"com.oneclickresize.panel.main\" Version=\"$new\"" "$MANIFEST" || verify_fail "$MANIFEST (extension)"
 grep -q "<b>V$new</b>" "$INDEX" || verify_fail "$INDEX"
+grep -q "<b>V$new</b>" "$SHOT" || verify_fail "$SHOT"
+
+# Rerender the README hero so its version label tracks the release (fail-soft:
+# the code ships even if Chrome is unavailable).
+./build-hero.sh || echo "⚠️  Hero image not regenerated — run ./build-hero.sh manually once Chrome is available."
 
 # --- Ship ------------------------------------------------------------------------
 git add -A
