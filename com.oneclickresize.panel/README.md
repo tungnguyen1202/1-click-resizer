@@ -74,18 +74,29 @@ then offers the update on next open.
 
 ## Install (macOS) — for teammates
 
-### Cách 1 — Bộ cài 1 click (dễ nhất, không cần Terminal)
+### Cách 1 — 1 lệnh Terminal (khuyên dùng, không dính "Move to Trash")
 
-1. Tải về: **https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip**
-2. Giải nén → **chuột phải** vào **"Cài đặt 1-Click Resizer"** → **Open** → **Open**
-   *(lần đầu macOS cảnh báo vì app chưa ký — chuột phải → Open là cách mở)*
-3. Thấy hộp thoại ✅ → thoát hẳn Premiere (Cmd+Q) → mở lại →
-   **Window → Extensions → 1-Click Resizer**
+Mở **Terminal**, dán và Enter:
 
-Xong. Từ đây mọi bản mới sẽ tự hiện nút **↑ Cập nhật** ngay trong panel —
-không bao giờ phải cài lại. (Auto-update cần `git` — máy đã cài Xcode Command
-Line Tools là có sẵn; nếu chưa có, panel vẫn chạy bình thường, chỉ không tự
-cập nhật.)
+```bash
+curl -fsSL https://raw.githubusercontent.com/tungnguyen1202/1-click-resizer/main/web-install.sh | bash
+```
+
+Rồi thoát hẳn Premiere (Cmd+Q) → mở lại → **Window → Extensions → 1-Click Resizer**.
+
+Vì không tải file app nào về máy nên macOS **không chặn** (hết lỗi *"Move to Trash"*
+trên Sequoia). Cần `git` (lần đầu macOS mời cài qua `xcode-select --install`). Từ
+đây mọi bản mới tự hiện nút **↑ Cập nhật** trong panel — không phải cài lại.
+
+<details>
+<summary>Cách 2 — Bộ cài .app (double-click)</summary>
+
+1. Tải: **https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip**
+2. Giải nén → **chuột phải** vào **"Cài đặt 1-Click Resizer"** → **Open**.
+3. **macOS 15 Sequoia**: nếu chỉ thấy **"Move to Trash"**, vào **System Settings →
+   Privacy & Security** → kéo xuống → **Open Anyway** cạnh tên app → mở lại.
+4. Thoát hẳn Premiere (Cmd+Q) → mở lại → **Window → Extensions → 1-Click Resizer**.
+</details>
 
 <details>
 <summary>Cách 2 — Cài bằng git (cho dev)</summary>

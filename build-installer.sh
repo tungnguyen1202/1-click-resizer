@@ -76,11 +76,25 @@ chmod +x "$APP/Contents/Resources/installer.sh"
 cat > "$PKG_DIR/ĐỌC TRƯỚC KHI CÀI.txt" <<'TXT'
 1-CLICK RESIZER — HƯỚNG DẪN CÀI (macOS)
 
-1. CHUỘT PHẢI vào "Cài đặt 1-Click Resizer" → chọn "Open" → bấm "Open"
-   (lần đầu macOS sẽ cảnh báo vì app chưa ký — chuột phải → Open là cách mở)
-2. Đợi hộp thoại "✅ Cài đặt thành công"
-3. Thoát hẳn Premiere (Cmd+Q) → mở lại
-4. Mở panel: Window → Extensions → 1-Click Resizer
+CÁCH NHANH NHẤT (khuyên dùng) — không gặp lỗi "Move to Trash":
+Mở Terminal, dán 1 lệnh sau rồi Enter:
+
+  curl -fsSL https://raw.githubusercontent.com/tungnguyen1202/1-click-resizer/main/web-install.sh | bash
+
+Rồi thoát hẳn Premiere (Cmd+Q) → mở lại → Window → Extensions → 1-Click Resizer.
+
+------------------------------------------------------------
+
+HOẶC cài bằng app này:
+
+1. CHUỘT PHẢI vào "Cài đặt 1-Click Resizer" → chọn "Open"
+2. NẾU chỉ thấy nút "Move to Trash" (macOS 15 Sequoia trở lên):
+   → Vào System Settings → Privacy & Security → kéo xuống dưới
+   → bấm "Open Anyway" cạnh tên app → mở lại app.
+   (Hoặc dùng lệnh Terminal ở trên cho nhanh.)
+3. Đợi hộp thoại "✅ Cài đặt thành công"
+4. Thoát hẳn Premiere (Cmd+Q) → mở lại
+5. Mở panel: Window → Extensions → 1-Click Resizer
 
 Từ nay về sau KHÔNG cần cài lại: có bản mới, panel tự hiện nút "↑ Cập nhật".
 TXT

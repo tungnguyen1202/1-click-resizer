@@ -34,12 +34,24 @@
 - **Reels safe zone** — when the target is 9:16, overlays are pulled inside a configurable safe band.
 - **Realtime** source detection (AUTO) and **in-panel auto-update** (a bar appears when a new version is out — one click to update).
 
-**Install (macOS, no Terminal)**
-1. [Download the installer .zip](https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip)
-2. Unzip → **right-click** “Cài đặt 1-Click Resizer” → **Open** → **Open** *(first launch only — the app is unsigned)*
-3. Quit Premiere fully (Cmd+Q), reopen → **Window → Extensions → 1-Click Resizer**
+**Install (macOS) — recommended, one Terminal command**
 
-From then on the panel updates itself — you never reinstall.
+Open **Terminal** and paste:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tungnguyen1202/1-click-resizer/main/web-install.sh | bash
+```
+
+Then quit Premiere fully (Cmd+Q), reopen → **Window → Extensions → 1-Click Resizer**. From then on the panel updates itself — you never reinstall.
+
+> Why Terminal? Nothing is downloaded as an app, so macOS Gatekeeper never blocks it. Needs `git` (macOS offers to install it on first run via `xcode-select --install`).
+
+<details><summary>Alternative: the .app installer</summary>
+
+1. [Download the installer .zip](https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip), unzip, **right-click** “Cài đặt 1-Click Resizer” → **Open**.
+2. **On macOS 15 Sequoia** the right-click trick no longer works — you'll see only **“Move to Trash”**. Fix: **System Settings → Privacy & Security**, scroll down, click **Open Anyway** next to the app's name, then reopen it. (Or just use the Terminal command above — simpler.)
+3. Quit Premiere fully (Cmd+Q), reopen → **Window → Extensions → 1-Click Resizer**.
+</details>
 
 ---
 
@@ -55,12 +67,24 @@ From then on the panel updates itself — you never reinstall.
 - **Safe zone Reels** — khi resize về 9:16, text/graphic lệch ra ngoài được kéo vào dải an toàn (chỉnh được).
 - **Nhận diện realtime** (AUTO) và **tự cập nhật trong panel** (có bản mới là hiện thanh báo — bấm một nút là xong).
 
-**Cài đặt (macOS, không cần Terminal)**
-1. [Tải bộ cài .zip](https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip)
-2. Giải nén → **chuột phải** vào “Cài đặt 1-Click Resizer” → **Open** → **Open** *(chỉ lần đầu — app chưa ký nên macOS cảnh báo)*
-3. Thoát hẳn Premiere (Cmd+Q), mở lại → **Window → Extensions → 1-Click Resizer**
+**Cài đặt (macOS) — khuyên dùng, chỉ 1 lệnh Terminal**
 
-Từ đó panel tự cập nhật — không bao giờ phải cài lại.
+Mở **Terminal** rồi dán:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tungnguyen1202/1-click-resizer/main/web-install.sh | bash
+```
+
+Sau đó thoát hẳn Premiere (Cmd+Q), mở lại → **Window → Extensions → 1-Click Resizer**. Từ đó panel tự cập nhật — không bao giờ phải cài lại.
+
+> Vì sao dùng Terminal? Không tải file app nào về máy nên macOS **không chặn** (hết lỗi *"Move to Trash"*). Cần có `git` (lần đầu macOS sẽ mời cài qua `xcode-select --install`).
+
+<details><summary>Cách khác: bộ cài .app</summary>
+
+1. [Tải bộ cài .zip](https://github.com/tungnguyen1202/1-click-resizer/releases/latest/download/1-Click-Resizer-Installer.zip), giải nén, **chuột phải** vào “Cài đặt 1-Click Resizer” → **Open**.
+2. **Trên macOS 15 Sequoia**, mẹo chuột phải không còn tác dụng — bạn sẽ chỉ thấy nút **“Move to Trash”**. Cách xử lý: vào **System Settings → Privacy & Security**, kéo xuống dưới, bấm **Open Anyway** cạnh tên app, rồi mở lại. (Hoặc dùng lệnh Terminal ở trên cho nhanh gọn.)
+3. Thoát hẳn Premiere (Cmd+Q), mở lại → **Window → Extensions → 1-Click Resizer**.
+</details>
 
 ---
 
