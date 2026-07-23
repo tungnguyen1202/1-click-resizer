@@ -14,11 +14,11 @@
 // │   SOME clips (a few .mp4/.mov); most .mp4, ALL .png, .aep, .aegraphic     │
 // │   return no dimensions. Coverage-by-native-size is therefore infeasible.  │
 // │ REPOSITION MODEL (native-size-free): overlay SCALE is never touched.      │
-// │   • Logo (clip name contains "Logo"): keep inside a marginPx box on all   │
-// │     4 edges (keep X/Y unless within margin). • Text/graphic/MOGRT: snap Y  │
-// │   the target ratio's guide line (keep X). • Background track (default V1): │
-// │   FILL scale-up by cover math over BOTH axes scale*max(1,tgtW/srcW,        │
-// │   tgtH/srcH). Everything else on overlay tracks is left untouched.         │
+// │   • Logo (name matches isLogoName): left exactly as-is (hand-placed).      │
+// │   • Text/graphic/MOGRT: snap Y to the target ratio's guide line (keep X).  │
+// │   • Background track (default V1): SCALE LEFT UNTOUCHED — native size is    │
+// │     unreadable so any auto-scale would over-scale; keeping the editor's     │
+// │     scale keeps 9:16-source footage filling 9:16. Others left untouched.    │
 // │ NOTE: v1 operates on the fixed Motion effect only (find component by      │
 // │   displayName "Motion"; props by displayName "Scale"/"Position").         │
 // └────────────────────────────────────────────────────────────────────────┘
@@ -187,27 +187,6 @@ function RSZ_setFrameSize(seq, w, h) {
   return (chk.videoFrameWidth === w && chk.videoFrameHeight === h);
 }
 
-// ---- per-clip FILL (background track only) ---------------------------------
-
-function RSZ_applyFill(clip, srcW, srcH, tgtW, tgtH) {
-  var motion = RSZ_findComponent(clip, "Motion");
-  if (!motion) { return false; }
-  var scaleProp = RSZ_findProp(motion, "Scale");
-  if (!scaleProp) { return false; }
-  var cur = scaleProp.getValue();
-  var next = RSZ.fillScale(cur, srcW, srcH, tgtW, tgtH);
-  if (next === cur) { return false; }
-  scaleProp.setValue(next, true);
-  // With Uniform Scale unticked, "Scale" drives height only — scale the width
-  // by the same factor so the background fills without distortion.
-  var uni = RSZ_findProp(motion, "Uniform Scale");
-  if (uni && !uni.getValue()) {
-    var sw = RSZ_findProp(motion, "Scale Width");
-    if (sw) { sw.setValue(sw.getValue() * (next / cur), true); }
-  }
-  return true;
-}
-
 function RSZ_isLogoClip(clip) {
   return RSZ.isLogoName(clip && clip.name);
 }
@@ -262,8 +241,6 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
   }
 
   var sourceSeq = info.seq;
-  var srcW = info.width;
-  var srcH = info.height;
   var baseName = info.name;
   var targets = RSZ.otherRatios(info.ratio);
   var parts = [];
@@ -288,8 +265,7 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
       } else {
         dup.name = RSZ.buildName(baseName, tgtRatio);
 
-        var scaled = 0;   // background clips scaled to fill
-        var moved = 0;    // overlays repositioned (guide / logo pin)
+        var moved = 0;    // overlays repositioned (text guide)
         var bgIndex = bgTrack - 1;
         // If the configured background track doesn't exist on this sequence
         // (e.g. a setting left over from a larger project), fall back to V1 so
@@ -302,11 +278,12 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
           for (var c = 0; c < track.clips.numItems; c++) {
             var clip = track.clips[c];
             if (vt === bgIndex) {
-              // Background: cover the new frame on both axes (fillScale is a
-              // no-op when the current scale already covers).
-              if (!RSZ_isGraphicClip(clip)) {
-                try { if (RSZ_applyFill(clip, srcW, srcH, tgt.w, tgt.h)) { scaled++; } } catch (ce) {}
-              }
+              // Background: SCALE LEFT UNTOUCHED. The API can't read a clip's
+              // native size, so any auto-scale would guess from the sequence
+              // ratio and over-scale (blow up + crop). Keeping the editor's
+              // scale means 9:16-source footage stays "Fill frame" going up to
+              // 9:16, and going down to 4:5/1:1 stays exactly as it was. Any
+              // non-9:16 background can be Fill-framed by hand (one right-click).
             } else if (RSZ_isLogoClip(clip)) {
               // Logo: left exactly as-is (the editor positions it by hand).
               // Detected only so it isn't snapped to the text guide below.
@@ -317,7 +294,7 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
           }
         }
         item = '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name)
-             + '","scaled":' + scaled + ',"moved":' + moved + '}';
+             + '","moved":' + moved + '}';
       }
     } catch (te) {
       item = '{"ratio":"' + tgtRatio + '","error":"' + RSZ_esc(String(te)) + '"'

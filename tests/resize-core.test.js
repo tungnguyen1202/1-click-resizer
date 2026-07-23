@@ -58,26 +58,6 @@ test("buildName appends the x-style label and swaps any prior label", () => {
   assert.strictEqual(RSZ.buildName(base + " 4-5", "9-16"), base + " 9x16");
 });
 
-test("fillScale covers the target frame on both axes, never scales down", () => {
-  // 1080x1920 (9-16) -> 1080x1350 (4-5): smaller on both axes, no change
-  assert.strictEqual(RSZ.fillScale(100, 1080, 1920, 1080, 1350), 100);
-  // 1080x1920 -> 1080x1080 (1-1): no change
-  assert.strictEqual(RSZ.fillScale(100, 1080, 1920, 1080, 1080), 100);
-  // 1080x1080 (1-1) -> 1080x1920 (9-16): taller, scale up 1920/1080
-  assert.ok(Math.abs(RSZ.fillScale(100, 1080, 1080, 1080, 1920) - 177.78) < 0.1);
-  // preserves the editor's existing zoom: 150% base, 4-5 -> 9-16
-  assert.ok(Math.abs(RSZ.fillScale(150, 1080, 1350, 1080, 1920) - 213.33) < 0.1);
-  // equal frames: unchanged
-  assert.strictEqual(RSZ.fillScale(100, 1080, 1080, 1080, 1080), 100);
-  // WIDTH matters: 720x1280 (9-16) -> 1080x1080 (1-1) needs 1.5x to span width
-  assert.strictEqual(RSZ.fillScale(100, 720, 1280, 1080, 1080), 150);
-  // 540x675 (4-5) -> 1080x1080 (1-1): width factor 2.0 beats height factor 1.6
-  assert.strictEqual(RSZ.fillScale(100, 540, 675, 1080, 1080), 200);
-  // degenerate source dims are a no-op, never Infinity/NaN
-  assert.strictEqual(RSZ.fillScale(100, 0, 0, 1080, 1920), 100);
-  assert.strictEqual(RSZ.fillScale(100, -10, 1920, 1080, 1920), 100);
-});
-
 test("isLogoName detects the team's logo naming conventions", () => {
   // core hints: "logo" and "fav" (covers fav vid / fav video / favicon)
   assert.strictEqual(RSZ.isLogoName("Logo"), true);

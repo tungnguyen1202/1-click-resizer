@@ -25,9 +25,11 @@ sequences (e.g. from 9:16 → `… 4x5` and `… 1x1`):
   1080×1350, 1:1 = 1080×1080). Frame rate preserved.
 - **Rename**: original name, trailing ratio label swapped, new label appended
   with a space — `MyClip 9x16` → `MyClip 4x5`.
-- **Background** (clips on the background track, default V1, that aren't
-  graphics): scaled up to keep covering **only when the target is taller**
-  (e.g. 1:1 → 9:16). Going to a shorter frame needs no change.
+- **Background** (clips on the background track, default V1): **scale left
+  untouched** — the panel API can't read a clip's native size, so auto-scaling
+  would guess from the sequence ratio and over-scale. Standard 9:16-source
+  footage already fills the 9:16 frame at its own scale; a non-matching
+  background can be **Fill frame**-d by hand (one right-click).
 - **Text / graphic / MOGRT**: scale kept; vertical position set to the target
   ratio's guide line (Settings; default centre), horizontal position kept.
 - **Logo** (clip name contains `logo`, `fav`, …): left exactly as-is — the
@@ -133,11 +135,11 @@ Then reload the panel (close/reopen, or restart Premiere).
 
 Primary (9:16 → 4:5 & 1:1):
 - [ ] Two new sequences appear, correctly named and sized (1080×1350, 1080×1080).
-- [ ] Overlays keep their relative position; background fills width (top/bottom cropped).
+- [ ] Text/graphics sit on the guide line; background keeps its scale (untouched); logos untouched.
 - [ ] Source sequence unchanged; audio untouched.
 
 Taller (1:1 or 4:5 → 9:16):
-- [ ] Background scales up to fill the 9:16 frame.
+- [ ] Background keeps its scale — 9:16-source footage fills the 9:16 frame, never over-scaled/cropped.
 - [ ] Text/graphics sit on the guide line; logos kept exactly where they were.
 
 General:
@@ -146,15 +148,17 @@ General:
 
 ## Known limitations (v1)
 
-- Background is identified by track (bottom track by default), not by content —
-  a full-frame element on an upper track won't be scaled up on a taller frame.
-- Text placement sets the clip's **Motion Position anchor** only — Premiere's API
-  gives no element size. Logos are intentionally left untouched (position them by
-  hand). Fine positioning may still need a manual touch.
+- Premiere's API gives no element/clip size, so the panel can't auto-"Fill
+  frame" a background reliably (it would over-scale) and can't invoke the
+  "Fill frame" menu command. Background scale is therefore left untouched;
+  Fill-frame any non-9:16 background by hand (one right-click).
+- Text placement sets the clip's **Motion Position anchor** only. Logos are
+  intentionally left untouched (position them by hand). Fine positioning may
+  still need a manual touch.
 - Only the fixed **Motion** effect is adjusted (not a separate Transform effect).
 - Width-constant 1080 ratios only.
-- A graphic placed **on the background track** is treated as background (filled),
-  not repositioned. Keep graphics/logos on upper tracks.
+- The background track (default V1) is left untouched; keep graphics/logos on
+  upper tracks so they get the guide/pass-through handling.
 - If a duplicate fails partway (e.g. Premiere rejects the frame-size change on an
   unusual sequence), the stray half-configured sequence is left in the project
   and reported as an error row; the source is never affected — just delete the

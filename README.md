@@ -24,14 +24,14 @@
 
 ## 🇬🇧 English
 
-**Click a sequence in the Project panel** (no need to open it) and press **RESIZE** — the panel turns it into the other two ratios of **{9:16, 4:5, 1:1}** as new sequences: duplicating, resizing the frame, renaming, filling the background, and keeping text/graphics inside the Reels safe zone. Your original sequence and audio are never touched.
+**Click a sequence in the Project panel** (no need to open it) and press **RESIZE** — the panel turns it into the other two ratios of **{9:16, 4:5, 1:1}** as new sequences: duplicating, resizing the frame, renaming, and placing text/graphics on your per-ratio guides. Your original sequence and audio are never touched.
 
 **What one click does**
 - **Duplicate** the active sequence (original untouched).
 - **Frame size** → target (1080-wide: 9:16 = 1080×1920, 4:5 = 1080×1350, 1:1 = 1080×1080); frame rate preserved.
-- **Rename** — swaps the trailing ratio label, e.g. `Clip 9-16` → `Clip 4-5`.
-- **Background fill** — background-track clips scale to cover a taller frame.
-- **Reels safe zone** — when the target is 9:16, overlays are pulled inside a configurable safe band.
+- **Rename** — swaps the trailing ratio label, e.g. `Clip 9x16` → `Clip 4x5`.
+- **Background kept at its scale** — never over-scaled or cropped. Standard 9:16-source footage fills the 9:16 frame as-is; a non-matching background can be “Fill frame”-d by hand in one click.
+- **Text guide** — text/graphics/MOGRT snap to a per-ratio guide line you set (Settings); logos are left untouched for manual placement.
 - **Realtime** source detection (AUTO) and **in-panel auto-update** (a bar appears when a new version is out — one click to update).
 
 **Install (macOS) — recommended, one Terminal command**
@@ -57,14 +57,14 @@ Then quit Premiere fully (Cmd+Q), reopen → **Window → Extensions → 1-Click
 
 ## 🇻🇳 Tiếng Việt
 
-**Click chọn một sequence ở Project panel** (không cần mở) rồi bấm **RESIZE** — panel biến nó thành hai ratio còn lại trong **{9:16, 4:5, 1:1}** dưới dạng sequence mới: tự duplicate, đổi khung, đặt tên, fill nền và giữ text/graphic trong vùng an toàn (safe zone) của Reels. **Sequence gốc và audio không bao giờ bị đụng tới.**
+**Click chọn một sequence ở Project panel** (không cần mở) rồi bấm **RESIZE** — panel biến nó thành hai ratio còn lại trong **{9:16, 4:5, 1:1}** dưới dạng sequence mới: tự duplicate, đổi khung, đặt tên và canh text/graphic theo guide từng ratio. **Sequence gốc và audio không bao giờ bị đụng tới.**
 
 **Một cú click làm gì**
 - **Duplicate** sequence đang mở (giữ nguyên bản gốc).
 - **Đổi khung** → ratio đích (rộng 1080: 9:16 = 1080×1920, 4:5 = 1080×1350, 1:1 = 1080×1080); giữ nguyên frame rate.
-- **Đổi tên** — thay nhãn ratio ở cuối, vd `Clip 9-16` → `Clip 4-5`.
-- **Fill nền** — clip ở track nền tự phóng to để phủ kín khung cao hơn.
-- **Safe zone Reels** — khi resize về 9:16, text/graphic lệch ra ngoài được kéo vào dải an toàn (chỉnh được).
+- **Đổi tên** — thay nhãn ratio ở cuối, vd `Clip 9x16` → `Clip 4x5`.
+- **Giữ nguyên scale nền** — không phóng lố, không cắt. Footage 9:16 gốc sẽ lấp đầy khung 9:16 y như cũ; nền khác tỉ lệ thì bạn tự "Fill frame" 1 click.
+- **Guide text** — text/graphic/MOGRT canh theo đường guide từng ratio (chỉnh trong Settings); logo giữ nguyên để canh tay.
 - **Nhận diện realtime** (AUTO) và **tự cập nhật trong panel** (có bản mới là hiện thanh báo — bấm một nút là xong).
 
 **Cài đặt (macOS) — khuyên dùng, chỉ 1 lệnh Terminal**

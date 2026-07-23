@@ -56,19 +56,6 @@ var RSZ = (function () {
     return stripTrailingRatioLabel(originalName) + " " + suffix;
   }
 
-  // Cover math over BOTH axes: the factor that keeps a frame-filling clip
-  // covering the target frame. detectRatio matches by aspect only, so the
-  // source may be any resolution (720x1280, 2160x3840, ...) — width matters
-  // as much as height. Never scales down (floor at 1).
-  function fillScale(currentScale, srcW, srcH, tgtW, tgtH) {
-    if (!(srcW > 0) || !(srcH > 0)) { return currentScale; }
-    var factor = tgtW / srcW;
-    var byH = tgtH / srcH;
-    if (byH > factor) { factor = byH; }
-    if (factor < 1) { factor = 1; }
-    return currentScale * factor;
-  }
-
   // A clip is treated as a logo when its name contains any of these hints
   // (case-insensitive substring). The team names logo files like "logo",
   // "fav vid", "fav video" — "fav" covers all of those. Add more hints here to
@@ -94,7 +81,6 @@ var RSZ = (function () {
     otherRatios: otherRatios,
     stripTrailingRatioLabel: stripTrailingRatioLabel,
     buildName: buildName,
-    fillScale: fillScale,
     clamp01: clamp01,
     LOGO_NAME_HINTS: LOGO_NAME_HINTS,
     isLogoName: isLogoName

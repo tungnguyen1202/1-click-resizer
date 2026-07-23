@@ -158,7 +158,6 @@
         '<span class="ostatus"><span class="dot"></span>' + (ok ? "DONE" : "ERROR") + '</span>';
       row.querySelector(".oinfo b").textContent = r.name || (RATIO_DISPLAY[r.ratio] || r.ratio);
       var sub = RATIO_DISPLAY[r.ratio] || r.ratio;
-      if (ok && r.scaled) { sub += " · nền phóng to"; }
       if (ok && r.moved) { sub += " · đã canh " + r.moved + " lớp"; }
       if (!ok) {
         sub = "không tạo được";
