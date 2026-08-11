@@ -182,10 +182,18 @@
     setBusy(true);
     var bg = parseInt(window.RSZ_BG_TRACK, 10) || 1;
     var g = window.RSZ_GUIDE || {};
-    var g9 = gnum(g["9-16"], 0.5), g45 = gnum(g["4-5"], 0.5), g11 = gnum(g["1-1"], 0.5);
+    var call;
+    if (window.RSZ_MODE === "PIN") {
+      // Pinterest: one 2:3 output.
+      call = 'RSZ_runResizePIN(' + bg + ',' + gnum(g["2-3"], 0.5) + ')';
+    } else {
+      // Google: the other two of 9:16 / 4:5 / 1:1.
+      var g9 = gnum(g["9-16"], 0.5), g45 = gnum(g["4-5"], 0.5), g11 = gnum(g["1-1"], 0.5);
+      call = 'RSZ_runResizeGG(' + bg + ',' + g9 + ',' + g45 + ',' + g11 + ')';
+    }
     setStatus("Đang xử lý…");
     ensureJsx(function () {
-      evalAsync('RSZ_runResizeAll(' + bg + ',' + g9 + ',' + g45 + ',' + g11 + ')', function (res) {
+      evalAsync(call, function (res) {
         btn.disabled = false;
         setBusy(false);
         var payload = null;
@@ -197,8 +205,29 @@
     });
   }
 
+  // Reflect the current mode on the toggle + the RESIZE button's sub-label.
+  function renderMode() {
+    var pin = window.RSZ_MODE === "PIN";
+    var segGG = document.getElementById("mode-gg");
+    var segPIN = document.getElementById("mode-pin");
+    if (segGG) { segGG.className = "seg" + (pin ? "" : " active"); }
+    if (segPIN) { segPIN.className = "seg" + (pin ? " active" : ""); }
+    var sub = document.querySelector("#go .sub");
+    if (sub) { sub.textContent = pin ? "Pinterest · 2:3" : "Google · 9:16 / 4:5 / 1:1"; }
+  }
+
+  function setMode(mode) {
+    window.RSZ_MODE = mode === "PIN" ? "PIN" : "GG";
+    try { window.localStorage.setItem(MODE_KEY, window.RSZ_MODE); } catch (e) {}
+    renderMode();
+  }
+
   window.initPanel = function () {
     document.getElementById("go").addEventListener("click", run);
+    var segGG = document.getElementById("mode-gg");
+    var segPIN = document.getElementById("mode-pin");
+    if (segGG) { segGG.addEventListener("click", function () { setMode("GG"); }); }
+    if (segPIN) { segPIN.addEventListener("click", function () { setMode("PIN"); }); }
     var refreshBtn = document.getElementById("refresh");
     if (refreshBtn) { refreshBtn.addEventListener("click", function () { refreshSource(true); }); }
     var autoBtn = document.getElementById("auto-toggle");
@@ -216,7 +245,8 @@
   window.initPanel();
 
   var BG_TRACK_KEY = "rsz.bgTrack";
-  var GUIDE_KEY = "rsz.guideY";       // JSON {"9-16":..,"4-5":..,"1-1":..}
+  var GUIDE_KEY = "rsz.guideY";       // JSON {"9-16":..,"4-5":..,"1-1":..,"2-3":..}
+  var MODE_KEY = "rsz.mode";          // "GG" (Google) | "PIN" (Pinterest)
 
   function gnum(v, def) {
     v = parseFloat(v);
@@ -226,15 +256,21 @@
 
   window.RSZ_BG_TRACK = parseInt(window.localStorage.getItem(BG_TRACK_KEY) || "1", 10) || 1;
   window.RSZ_GUIDE = (function () {
-    var d = { "9-16": 0.5, "4-5": 0.5, "1-1": 0.5 };
+    var d = { "9-16": 0.5, "4-5": 0.5, "1-1": 0.5, "2-3": 0.5 };
     try {
       var saved = JSON.parse(window.localStorage.getItem(GUIDE_KEY) || "{}");
       d["9-16"] = gnum(saved["9-16"], 0.5);
       d["4-5"] = gnum(saved["4-5"], 0.5);
       d["1-1"] = gnum(saved["1-1"], 0.5);
+      d["2-3"] = gnum(saved["2-3"], 0.5);
     } catch (e) {}
     return d;
   })();
+  window.RSZ_MODE = (function () {
+    try { return window.localStorage.getItem(MODE_KEY) === "PIN" ? "PIN" : "GG"; }
+    catch (e) { return "GG"; }
+  })();
+  renderMode(); // RSZ_MODE is set now; reflect it on the toggle + button
 
   function showSettings(show) {
     var main = document.getElementById("main-view");
@@ -244,13 +280,14 @@
   }
 
   // ---- Text guide editor (one horizontal guide line per ratio) -----------
-  var RATIO_ASPECT = { "9-16": 1920 / 1080, "4-5": 1350 / 1080, "1-1": 1 };
+  var RATIO_ASPECT = { "9-16": 1920 / 1080, "4-5": 1350 / 1080, "1-1": 1, "2-3": 1620 / 1080 };
   // Reference safe-zone insets (fraction of the frame) shown as a faint box to
-  // help align the guide line. 9:16 ~ Reels; 4:5 / 1:1 a modest inset.
+  // help align the guide line. 9:16 ~ Reels; 4:5 / 1:1 / 2:3 a modest inset.
   var SAFE_REF = {
     "9-16": { top: 0.12, bottom: 0.33, side: 0.06 },
     "4-5":  { top: 0.08, bottom: 0.10, side: 0.06 },
-    "1-1":  { top: 0.08, bottom: 0.12, side: 0.06 }
+    "1-1":  { top: 0.08, bottom: 0.12, side: 0.06 },
+    "2-3":  { top: 0.08, bottom: 0.12, side: 0.06 }
   };
   var GZ_WIDTH = 92; // px; frame height = width * aspect
   var curRatio = "9-16";

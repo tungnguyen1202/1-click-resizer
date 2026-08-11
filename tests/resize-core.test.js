@@ -47,6 +47,41 @@ test("stripTrailingRatioLabel removes only a trailing known label", () => {
   assert.strictEqual(RSZ.buildName("Clip 9x16 ", "4-5"), "Clip 4x5");
 });
 
+test("RATIOS/LABELS carry 2:3 (Pinterest); ORDER stays the GG set; detectRatio ignores 2:3", () => {
+  assert.deepStrictEqual(RSZ.RATIOS["2-3"], { w: 1080, h: 1620 });
+  assert.strictEqual(RSZ.LABELS["2-3"], "2x3");
+  assert.deepStrictEqual(RSZ.ORDER, ["9-16", "4-5", "1-1"]);
+  // 2:3 is PIN-only — detectRatio must never pick it as a source ratio
+  assert.strictEqual(RSZ.detectRatio(1080, 1620), null);
+});
+
+test("buildName appends a platform tag after the ratio label", () => {
+  var base = "SoftyGrace v1.1 [c.ngoc.nguyen][tung.thanhnguyen]";
+  assert.strictEqual(RSZ.buildName(base, "4-5", "GG"), base + " 4x5 GG");
+  assert.strictEqual(RSZ.buildName(base, "2-3", "PIN"), base + " 2x3 PIN");
+  // no platform arg -> legacy label-only form still works
+  assert.strictEqual(RSZ.buildName(base, "1-1"), base + " 1x1");
+});
+
+test("re-resizing swaps ratio + platform cleanly (no stacking)", () => {
+  var base = "Brand vid17.0 [ed.a]";
+  assert.strictEqual(RSZ.buildName(base + " 4x5 GG", "1-1", "GG"), base + " 1x1 GG");
+  assert.strictEqual(RSZ.buildName(base + " 4x5 GG", "2-3", "PIN"), base + " 2x3 PIN");
+  assert.strictEqual(RSZ.buildName(base + " 2x3 PIN", "9-16", "GG"), base + " 9x16 GG");
+  // legacy plain-ratio name still swaps into the new tagged form
+  assert.strictEqual(RSZ.buildName(base + " 9x16", "4-5", "GG"), base + " 4x5 GG");
+});
+
+test("stripTrailingRatioLabel handles ratio+platform, leaves real names alone", () => {
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 4x5 GG"), "Clip");
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 2x3 PIN"), "Clip");
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 9-16 GG"), "Clip"); // legacy dash + tag
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Clip 4x5 GG "), "Clip"); // trailing space
+  // a real name ending in GG/PIN with NO ratio before it must be preserved
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Weekly GG"), "Weekly GG");
+  assert.strictEqual(RSZ.stripTrailingRatioLabel("Team PIN"), "Team PIN");
+});
+
 test("buildName appends the x-style label and swaps any prior label", () => {
   var base = "Brand vid17.0 [editor.a][editor.b]";
   assert.strictEqual(RSZ.buildName(base, "4-5"), base + " 4x5");

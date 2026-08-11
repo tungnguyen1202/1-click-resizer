@@ -219,20 +219,77 @@ function RSZ_makeActive(seq) {
 
 // ---- orchestration ---------------------------------------------------------
 
-// Args (all numbers): bgTrack = 1-based background track (default 1);
-// guide9/guide45/guide11 = the text guide Y (normalized 0..1) per ratio
-// (default 0.5 = centre). Overlays keep their Scale: text/graphic/MOGRT snap to
-// the target ratio's guide Y (X unchanged). Logos (name matched by isLogoName)
-// are LEFT UNTOUCHED — the editor positions them by hand — but are still
-// detected so they never get swept up by the text-guide branch.
-// Returns a hand-built JSON string (no JSON global in ExtendScript). Each
-// target is isolated in try/catch so one failure still returns well-formed
-// results and always restores the original active sequence.
-function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
+function RSZ_guideOf(v) { v = parseFloat(v); return isNaN(v) ? 0.5 : RSZ.clamp01(v); }
+
+function RSZ_normBgTrack(bgTrack) {
   bgTrack = parseInt(bgTrack, 10);
-  if (!bgTrack || bgTrack < 1) { bgTrack = 1; }
-  function guideOf(v) { v = parseFloat(v); return isNaN(v) ? 0.5 : RSZ.clamp01(v); }
-  var guideByRatio = { "9-16": guideOf(guide9), "4-5": guideOf(guide45), "1-1": guideOf(guide11) };
+  return (!bgTrack || bgTrack < 1) ? 1 : bgTrack;
+}
+
+// Reposition overlays inside `dup`: background track left untouched (scale kept),
+// logos left untouched, text/graphic/MOGRT snapped to guideY. Returns the count
+// of clips moved.
+function RSZ_layoutClips(dup, bgTrack, guideY) {
+  var moved = 0;
+  var bgIndex = bgTrack - 1;
+  // If the configured background track doesn't exist on this sequence, fall back
+  // to V1 so the real background is never mistaken for an overlay.
+  if (bgIndex < 0 || bgIndex >= dup.videoTracks.numTracks) { bgIndex = 0; }
+  for (var vt = 0; vt < dup.videoTracks.numTracks; vt++) {
+    var track = dup.videoTracks[vt];
+    for (var c = 0; c < track.clips.numItems; c++) {
+      var clip = track.clips[c];
+      if (vt === bgIndex) {
+        // Background: SCALE LEFT UNTOUCHED. The API can't read a clip's native
+        // size, so any auto-scale would over-scale (blow up + crop). Keeping the
+        // editor's scale means 9:16-source footage stays "Fill frame" going up.
+      } else if (RSZ_isLogoClip(clip)) {
+        // Logo: left exactly as-is (the editor positions it by hand). Detected
+        // only so it isn't snapped to the text guide below.
+      } else if (RSZ_isGraphicClip(clip)) {
+        // Text / graphic / MOGRT: keep Scale, snap Y to this ratio's guide.
+        try { if (RSZ_setClipY(clip, guideY)) { moved++; } } catch (se) {}
+      }
+    }
+  }
+  return moved;
+}
+
+// Duplicate `sourceSeq`, reframe to `tgtRatio`, rename with the platform tag,
+// and lay out its clips. Returns a hand-built JSON result item (ExtendScript has
+// no JSON global). Isolated so one failing target never aborts the batch.
+function RSZ_makeVariant(sourceSeq, baseName, tgtRatio, platform, bgTrack, guideY) {
+  var tgt = RSZ.RATIOS[tgtRatio];
+  var dup = null; // visible in catch so a stranded duplicate can be reported
+  try {
+    // Re-select the source each time so every duplicate derives from the
+    // original (also opens it if it was only selected in the Project panel).
+    RSZ_makeActive(sourceSeq);
+    dup = RSZ_duplicateSequence(sourceSeq);
+    if (!dup) {
+      return '{"ratio":"' + tgtRatio + '","error":"DUPLICATE_FAILED"}';
+    }
+    if (!RSZ_setFrameSize(dup, tgt.w, tgt.h)) {
+      dup.name = RSZ.buildName(baseName, tgtRatio, platform);
+      return '{"ratio":"' + tgtRatio + '","error":"FRAME_SIZE_FAILED","orphan":"'
+           + RSZ_esc(dup.name) + '"}';
+    }
+    dup.name = RSZ.buildName(baseName, tgtRatio, platform);
+    var moved = RSZ_layoutClips(dup, bgTrack, guideY);
+    return '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name)
+         + '","moved":' + moved + '}';
+  } catch (te) {
+    return '{"ratio":"' + tgtRatio + '","error":"' + RSZ_esc(String(te)) + '"'
+         + (dup ? ',"orphan":"' + RSZ_esc(dup.name) + '"' : '') + '}';
+  }
+}
+
+// GG (Google): from a 9:16 / 4:5 / 1:1 source, create the OTHER two ratios,
+// naming them "... <ratio> GG". Args: bgTrack; guide9/guide45/guide11 = per-ratio
+// text guide Y (0..1, default 0.5).
+function RSZ_runResizeGG(bgTrack, guide9, guide45, guide11) {
+  bgTrack = RSZ_normBgTrack(bgTrack);
+  var guideByRatio = { "9-16": RSZ_guideOf(guide9), "4-5": RSZ_guideOf(guide45), "1-1": RSZ_guideOf(guide11) };
 
   var info = RSZ_activeInfoObj();
   if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
@@ -240,70 +297,27 @@ function RSZ_runResizeAll(bgTrack, guide9, guide45, guide11) {
     return '{"ok":false,"error":"UNKNOWN_RATIO","width":' + info.width + ',"height":' + info.height + '}';
   }
 
-  var sourceSeq = info.seq;
-  var baseName = info.name;
   var targets = RSZ.otherRatios(info.ratio);
   var parts = [];
-
   for (var t = 0; t < targets.length; t++) {
-    var tgtRatio = targets[t];
-    var tgt = RSZ.RATIOS[tgtRatio];
-    var item;
-    var dup = null; // visible in catch so a stranded duplicate can be reported
-    try {
-      // Re-select the source each time so every duplicate derives from the
-      // original (also opens it if it was only selected in the Project panel).
-      RSZ_makeActive(sourceSeq);
-      dup = RSZ_duplicateSequence(sourceSeq);
-      if (!dup) {
-        item = '{"ratio":"' + tgtRatio + '","error":"DUPLICATE_FAILED"}';
-      } else if (!RSZ_setFrameSize(dup, tgt.w, tgt.h)) {
-        // Don't scale/clamp against a frame that never changed.
-        dup.name = RSZ.buildName(baseName, tgtRatio);
-        item = '{"ratio":"' + tgtRatio + '","error":"FRAME_SIZE_FAILED","orphan":"'
-             + RSZ_esc(dup.name) + '"}';
-      } else {
-        dup.name = RSZ.buildName(baseName, tgtRatio);
-
-        var moved = 0;    // overlays repositioned (text guide)
-        var bgIndex = bgTrack - 1;
-        // If the configured background track doesn't exist on this sequence
-        // (e.g. a setting left over from a larger project), fall back to V1 so
-        // the real background is never mistaken for an overlay.
-        if (bgIndex < 0 || bgIndex >= dup.videoTracks.numTracks) { bgIndex = 0; }
-        var guideY = guideByRatio[tgtRatio];
-
-        for (var vt = 0; vt < dup.videoTracks.numTracks; vt++) {
-          var track = dup.videoTracks[vt];
-          for (var c = 0; c < track.clips.numItems; c++) {
-            var clip = track.clips[c];
-            if (vt === bgIndex) {
-              // Background: SCALE LEFT UNTOUCHED. The API can't read a clip's
-              // native size, so any auto-scale would guess from the sequence
-              // ratio and over-scale (blow up + crop). Keeping the editor's
-              // scale means 9:16-source footage stays "Fill frame" going up to
-              // 9:16, and going down to 4:5/1:1 stays exactly as it was. Any
-              // non-9:16 background can be Fill-framed by hand (one right-click).
-            } else if (RSZ_isLogoClip(clip)) {
-              // Logo: left exactly as-is (the editor positions it by hand).
-              // Detected only so it isn't snapped to the text guide below.
-            } else if (RSZ_isGraphicClip(clip)) {
-              // Text / graphic / MOGRT: keep Scale, snap Y to this ratio's guide.
-              try { if (RSZ_setClipY(clip, guideY)) { moved++; } } catch (se) {}
-            }
-          }
-        }
-        item = '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name)
-             + '","moved":' + moved + '}';
-      }
-    } catch (te) {
-      item = '{"ratio":"' + tgtRatio + '","error":"' + RSZ_esc(String(te)) + '"'
-           + (dup ? ',"orphan":"' + RSZ_esc(dup.name) + '"' : '') + '}';
-    }
-    parts.push(item);
+    parts.push(RSZ_makeVariant(info.seq, info.name, targets[t], "GG", bgTrack, guideByRatio[targets[t]]));
   }
-
-  RSZ_makeActive(sourceSeq);
+  RSZ_makeActive(info.seq);
   return '{"ok":true,"source":"' + info.ratio + '","from":"' + info.from
        + '","results":[' + parts.join(",") + '],"error":null}';
+}
+
+// PIN (Pinterest): from ANY source, create a single 2:3 sequence named
+// "... 2x3 PIN". Args: bgTrack; guide23 = the 2:3 text guide Y (0..1).
+function RSZ_runResizePIN(bgTrack, guide23) {
+  bgTrack = RSZ_normBgTrack(bgTrack);
+  var guideY = RSZ_guideOf(guide23);
+
+  var info = RSZ_activeInfoObj();
+  if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
+
+  var item = RSZ_makeVariant(info.seq, info.name, "2-3", "PIN", bgTrack, guideY);
+  RSZ_makeActive(info.seq);
+  return '{"ok":true,"source":' + (info.ratio ? ('"' + info.ratio + '"') : 'null')
+       + ',"from":"' + info.from + '","results":[' + item + '],"error":null}';
 }
