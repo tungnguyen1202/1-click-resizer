@@ -5,7 +5,7 @@
 
   // Pure display formatting only — the ratio itself is decided by ExtendScript's
   // detectRatio and arrives on info.ratio. No ratio classification lives here.
-  var RATIO_DISPLAY = { "9-16": "9 : 16", "4-5": "4 : 5", "1-1": "1 : 1" };
+  var RATIO_DISPLAY = { "9-16": "9 : 16", "4-5": "4 : 5", "1-1": "1 : 1", "2-3": "2 : 3" };
 
   function setStatus(message) {
     var el = document.getElementById("status-msg");
@@ -48,7 +48,12 @@
       pill.className = selected ? "pill ok" : "pill rec";
       pill.innerHTML = '<span class="dot"></span><span class="pill-label"></span>';
       var label = pill.querySelector(".pill-label");
-      if (selected) {
+      if (selected && info.count > 1) {
+        // Batch: the Project panel already highlights which ones, so just say
+        // how many will be processed.
+        label.textContent = info.count + " sequence đã chọn";
+        pill.title = "Sẽ resize cả " + info.count + " sequence đang chọn";
+      } else if (selected) {
         var nm = info.name || "Sequence";
         label.textContent = nm.length > 26 ? (nm.substring(0, 25) + "…") : nm;
         pill.title = nm; // full name on hover
@@ -97,7 +102,9 @@
         paintEngine(true);
         if (info) {
           el.querySelector("b").textContent = RATIO_DISPLAY[info.ratio] || "—";
-          el.querySelector("span").textContent = info.width + " × " + info.height;
+          var sizeTxt = info.width + " × " + info.height;
+          if (info.count > 1) { sizeTxt += " · +" + (info.count - 1) + " sequence nữa"; }
+          el.querySelector("span").textContent = sizeTxt;
           setStatus("");
         } else {
           resetMeta(el);
@@ -148,23 +155,36 @@
          : "có lỗi xảy ra") + "</p>";
       return;
     }
+    var made = 0, failed = 0;
     for (var i = 0; i < payload.results.length; i++) {
       var r = payload.results[i];
       var row = document.createElement("div");
       row.className = "orow show";
       var ok = !r.error;
+      if (ok) { made++; } else { failed++; }
       row.innerHTML = '<span class="oico"></span><div class="oinfo"><b></b><span></span></div>' +
         '<span class="ostatus"><span class="dot"></span>' + (ok ? "DONE" : "ERROR") + '</span>';
-      row.querySelector(".oinfo b").textContent = r.name || (RATIO_DISPLAY[r.ratio] || r.ratio);
-      var sub = RATIO_DISPLAY[r.ratio] || r.ratio;
+      row.querySelector(".oinfo b").textContent =
+        r.name || r.src || (RATIO_DISPLAY[r.ratio] || r.ratio);
+      var sub = RATIO_DISPLAY[r.ratio] || r.ratio || "";
       if (ok && r.moved) { sub += " · đã canh " + r.moved + " lớp"; }
       if (ok && r.bin) { sub += " · bin: " + r.bin; }
       if (!ok) {
-        sub = "không tạo được";
+        sub = r.error === "UNKNOWN_RATIO"
+          ? "bỏ qua — ratio nguồn không nằm trong 9:16 / 4:5 / 1:1"
+          : "không tạo được";
         if (r.orphan) { sub += " — bản dở dang: " + r.orphan; }
       }
       row.querySelector(".oinfo span").textContent = sub;
       outs.appendChild(row);
+    }
+    // Batch summary: how many sources went in, how many sequences came out.
+    if (payload.count > 1 || failed) {
+      var sum = document.createElement("p");
+      sum.className = "hint";
+      sum.textContent = (payload.count || 1) + " sequence nguồn · tạo " + made + " bản"
+                      + (failed ? " · " + failed + " lỗi/bỏ qua" : "");
+      outs.appendChild(sum);
     }
   }
 

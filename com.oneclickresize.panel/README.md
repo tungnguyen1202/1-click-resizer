@@ -8,12 +8,15 @@ A CEP panel that turns the active sequence into the other two aspect ratios of
 frame size, renames it, fills the background, and places text/graphics on your
 per-ratio guides (logos are left where they are for a manual touch).
 
-## Choosing which sequence
+## Choosing which sequences
 
-The panel resizes **the sequence selected in the Project panel** (just click it —
-no need to open it). If nothing is selected, it falls back to the sequence
-currently open in the timeline. The source block shows which one it's using
-(`SEQUENCE ĐÃ CHỌN` vs `SEQUENCE ĐANG MỞ`).
+The panel resizes **every sequence selected in the Project panel** (just click
+them — no need to open them). Select one or shift/⌘-click a whole batch: each
+source is processed independently, with its own ratio and its own bin, and one
+bad source (a ratio outside the set) is reported on its own row instead of
+aborting the rest. If nothing is selected, the panel falls back to the sequence
+open in the timeline. The header pill shows what it will act on — the sequence
+name, or `N sequence đã chọn` for a batch.
 
 ## What one click does
 

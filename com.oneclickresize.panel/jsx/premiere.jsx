@@ -97,24 +97,31 @@ function RSZ_isSequenceItem(item) {
   catch (e) { return false; }
 }
 
-// The sequence to act on: the one SELECTED in the Project panel if it is a
-// sequence, otherwise the open/active sequence. Returns { seq, from }.
-function RSZ_resolveSource() {
+// EVERY sequence selected in the Project panel (batch resize), in selection
+// order and de-duplicated by sequenceID. Falls back to the open/active sequence
+// when nothing usable is selected. Returns { seqs: [...], from }.
+function RSZ_resolveSources() {
+  var out = [];
+  var seen = {};
   try {
     if (typeof app.getCurrentProjectViewSelection === "function") {
       var sel = app.getCurrentProjectViewSelection();
       if (sel && sel.length) {
         for (var i = 0; i < sel.length; i++) {
-          if (RSZ_isSequenceItem(sel[i])) {
-            var s = RSZ_seqFromProjectItem(sel[i]);
-            if (s) { return { seq: s, from: "selection" }; }
-          }
+          if (!RSZ_isSequenceItem(sel[i])) { continue; }
+          var s = RSZ_seqFromProjectItem(sel[i]);
+          if (!s) { continue; }
+          var id = s.sequenceID;
+          if (id && seen[id]) { continue; }
+          if (id) { seen[id] = true; }
+          out.push(s);
         }
       }
     }
   } catch (e) {}
+  if (out.length) { return { seqs: out, from: "selection" }; }
   var a = app.project.activeSequence;
-  return a ? { seq: a, from: "active" } : { seq: null, from: "none" };
+  return a ? { seqs: [a], from: "active" } : { seqs: [], from: "none" };
 }
 
 // Diagnostics for when no source can be found — surfaced to the panel so a
@@ -136,24 +143,31 @@ function RSZ_sourceDiag() {
 
 // ---- sequence info ---------------------------------------------------------
 
-// Internal: returns the live objects + geometry (not for evalScript).
-function RSZ_activeInfoObj() {
-  var r = RSZ_resolveSource();
-  var seq = r.seq;
-  if (!seq) { return null; }
+function RSZ_seqGeom(seq) {
   var st = seq.getSettings();
-  var w = st.videoFrameWidth;
-  var h = st.videoFrameHeight;
-  return { seq: seq, from: r.from, name: seq.name, width: w, height: h, ratio: RSZ.detectRatio(w, h) };
+  return { w: st.videoFrameWidth, h: st.videoFrameHeight };
+}
+
+// Internal: the live objects + geometry of the FIRST source (not for
+// evalScript). `count` is how many sequences a run would process.
+function RSZ_activeInfoObj() {
+  var r = RSZ_resolveSources();
+  if (!r.seqs.length) { return null; }
+  var seq = r.seqs[0];
+  var g = RSZ_seqGeom(seq);
+  return { seq: seq, from: r.from, name: seq.name, width: g.w, height: g.h,
+           ratio: RSZ.detectRatio(g.w, g.h), count: r.seqs.length };
 }
 
 // Public (evalScript): JSON string for the panel. detectRatio is the single
-// source of truth for the ratio label; the panel only displays it.
+// source of truth for the ratio label; the panel only displays it. `count` lets
+// the panel say "3 sequence đã chọn" before the user commits to a batch.
 function RSZ_activeSequenceInfo() {
   var o = RSZ_activeInfoObj();
   if (!o) { return "null"; }
   return '{"name":"' + RSZ_esc(o.name) + '","width":' + o.width
        + ',"height":' + o.height + ',"from":"' + o.from + '"'
+       + ',"count":' + o.count
        + ',"ratio":' + (o.ratio ? ('"' + o.ratio + '"') : 'null') + '}';
 }
 
@@ -315,6 +329,7 @@ function RSZ_layoutClips(dup, bgTrack, guideY) {
 // global). Isolated so one failing target never aborts the batch.
 function RSZ_makeVariant(sourceSeq, baseName, tgtRatio, platform, bgTrack, guideY, destBin) {
   var tgt = RSZ.RATIOS[tgtRatio];
+  var src = ',"src":"' + RSZ_esc(baseName) + '"';   // which selected sequence this came from
   var dup = null; // visible in catch so a stranded duplicate can be reported
   try {
     // Re-select the source each time so every duplicate derives from the
@@ -322,64 +337,91 @@ function RSZ_makeVariant(sourceSeq, baseName, tgtRatio, platform, bgTrack, guide
     RSZ_makeActive(sourceSeq);
     dup = RSZ_duplicateSequence(sourceSeq);
     if (!dup) {
-      return '{"ratio":"' + tgtRatio + '","error":"DUPLICATE_FAILED"}';
+      return '{"ratio":"' + tgtRatio + '"' + src + ',"error":"DUPLICATE_FAILED"}';
     }
     if (!RSZ_setFrameSize(dup, tgt.w, tgt.h)) {
       dup.name = RSZ.buildName(baseName, tgtRatio, platform);
-      return '{"ratio":"' + tgtRatio + '","error":"FRAME_SIZE_FAILED","orphan":"'
+      return '{"ratio":"' + tgtRatio + '"' + src + ',"error":"FRAME_SIZE_FAILED","orphan":"'
            + RSZ_esc(dup.name) + '"}';
     }
     dup.name = RSZ.buildName(baseName, tgtRatio, platform);
     // clone() drops the copy at the project root — put it beside its source.
     var binName = RSZ_moveSeqToBin(dup, destBin) ? String(destBin.name) : "";
     var moved = RSZ_layoutClips(dup, bgTrack, guideY);
-    return '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name)
-         + '","moved":' + moved
+    return '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name) + '"' + src
+         + ',"moved":' + moved
          + (binName ? ',"bin":"' + RSZ_esc(binName) + '"' : '') + '}';
   } catch (te) {
-    return '{"ratio":"' + tgtRatio + '","error":"' + RSZ_esc(String(te)) + '"'
+    return '{"ratio":"' + tgtRatio + '"' + src + ',"error":"' + RSZ_esc(String(te)) + '"'
          + (dup ? ',"orphan":"' + RSZ_esc(dup.name) + '"' : '') + '}';
   }
 }
 
-// GG (Google): from a 9:16 / 4:5 / 1:1 source, create the OTHER two ratios,
-// naming them "... <ratio> GG". Args: bgTrack; guide9/guide45/guide11 = per-ratio
-// text guide Y (0..1, default 0.5).
+// Snapshot every selected sequence's identity BEFORE any cloning: clone() adds
+// items to the project, which grows the bin tree and can change the Project
+// panel selection out from under us. Each job carries its own ratio, geometry
+// and bin, so a batch of differently-sized sequences is handled correctly.
+function RSZ_snapshotJobs(seqs) {
+  var jobs = [];
+  for (var i = 0; i < seqs.length; i++) {
+    var seq = seqs[i];
+    var g, bin = null, nm = "";
+    try { g = RSZ_seqGeom(seq); } catch (e) { g = { w: 0, h: 0 }; }
+    try { nm = String(seq.name); } catch (e1) {}
+    try { bin = RSZ_findParentBin(seq.projectItem); } catch (e2) {}
+    jobs.push({ seq: seq, name: nm, width: g.w, height: g.h,
+                ratio: RSZ.detectRatio(g.w, g.h), bin: bin });
+  }
+  return jobs;
+}
+
+// GG (Google): for EVERY selected 9:16 / 4:5 / 1:1 sequence, create the OTHER
+// two ratios, naming them "... <ratio> GG". Args: bgTrack; guide9/guide45/guide11
+// = per-ratio text guide Y (0..1, default 0.5). A source whose ratio isn't in the
+// set is reported per-sequence and never aborts the rest of the batch.
 function RSZ_runResizeGG(bgTrack, guide9, guide45, guide11) {
   bgTrack = RSZ_normBgTrack(bgTrack);
   var guideByRatio = { "9-16": RSZ_guideOf(guide9), "4-5": RSZ_guideOf(guide45), "1-1": RSZ_guideOf(guide11) };
 
-  var info = RSZ_activeInfoObj();
-  if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
-  if (!info.ratio) {
-    return '{"ok":false,"error":"UNKNOWN_RATIO","width":' + info.width + ',"height":' + info.height + '}';
-  }
+  var src = RSZ_resolveSources();
+  if (!src.seqs.length) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
 
-  // Resolve the source's bin once — every variant lands in the same place.
-  var destBin = RSZ_findParentBin(info.seq.projectItem);
-  var targets = RSZ.otherRatios(info.ratio);
+  var jobs = RSZ_snapshotJobs(src.seqs);
   var parts = [];
-  for (var t = 0; t < targets.length; t++) {
-    parts.push(RSZ_makeVariant(info.seq, info.name, targets[t], "GG", bgTrack,
-                               guideByRatio[targets[t]], destBin));
+  for (var i = 0; i < jobs.length; i++) {
+    var j = jobs[i];
+    if (!j.ratio) {
+      parts.push('{"src":"' + RSZ_esc(j.name) + '","error":"UNKNOWN_RATIO","width":'
+               + j.width + ',"height":' + j.height + '}');
+      continue;
+    }
+    var targets = RSZ.otherRatios(j.ratio);
+    for (var t = 0; t < targets.length; t++) {
+      parts.push(RSZ_makeVariant(j.seq, j.name, targets[t], "GG", bgTrack,
+                                 guideByRatio[targets[t]], j.bin));
+    }
   }
-  RSZ_makeActive(info.seq);
-  return '{"ok":true,"source":"' + info.ratio + '","from":"' + info.from
+  RSZ_makeActive(jobs[0].seq);
+  return '{"ok":true,"count":' + jobs.length + ',"from":"' + src.from
        + '","results":[' + parts.join(",") + '],"error":null}';
 }
 
-// PIN (Pinterest): from ANY source, create a single 2:3 sequence named
-// "... 2x3 PIN". Args: bgTrack; guide23 = the 2:3 text guide Y (0..1).
+// PIN (Pinterest): for EVERY selected sequence (any ratio), create a single 2:3
+// sequence named "... 2x3 PIN". Args: bgTrack; guide23 = the 2:3 text guide Y.
 function RSZ_runResizePIN(bgTrack, guide23) {
   bgTrack = RSZ_normBgTrack(bgTrack);
   var guideY = RSZ_guideOf(guide23);
 
-  var info = RSZ_activeInfoObj();
-  if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
+  var src = RSZ_resolveSources();
+  if (!src.seqs.length) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
 
-  var destBin = RSZ_findParentBin(info.seq.projectItem);
-  var item = RSZ_makeVariant(info.seq, info.name, "2-3", "PIN", bgTrack, guideY, destBin);
-  RSZ_makeActive(info.seq);
-  return '{"ok":true,"source":' + (info.ratio ? ('"' + info.ratio + '"') : 'null')
-       + ',"from":"' + info.from + '","results":[' + item + '],"error":null}';
+  var jobs = RSZ_snapshotJobs(src.seqs);
+  var parts = [];
+  for (var i = 0; i < jobs.length; i++) {
+    parts.push(RSZ_makeVariant(jobs[i].seq, jobs[i].name, "2-3", "PIN", bgTrack,
+                               guideY, jobs[i].bin));
+  }
+  RSZ_makeActive(jobs[0].seq);
+  return '{"ok":true,"count":' + jobs.length + ',"from":"' + src.from
+       + '","results":[' + parts.join(",") + '],"error":null}';
 }
