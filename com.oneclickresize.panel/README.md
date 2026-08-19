@@ -58,11 +58,9 @@ It bumps `version.json`, syncs the version into the manifest and the panel's
 version label, commits everything, and pushes to GitHub. Every teammate's panel
 then offers the update on next open.
 
-It also regenerates the README hero image, cuts a matching GitHub release with the
-installer zip, and **mirrors the push to every remote listed in `MIRRORS`** (the
-maintainer's second account) so both repos stay on the same commits and tags.
-`origin` is always pushed first and is what gates the release; a mirror that is
-unreachable prints a warning and never blocks it.
+It also regenerates the README hero image and cuts a matching GitHub release with
+the installer zip. Everything targets `origin` — the repo teammates auto-update
+from.
 
 ## Status indicators
 
