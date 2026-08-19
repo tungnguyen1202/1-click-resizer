@@ -110,7 +110,6 @@
   // ---- Realtime auto-detect (the AUTO badge is a working toggle) -----------
   // Premiere never emits a usable sequence-changed CSXS event, so poll cheaply:
   // one evalScript per tick, DOM untouched unless the answer actually changed.
-  var AUTO_KEY = "rsz.autoDetect";
   var autoTimer = null;
 
   function paintAutoBadge() {
@@ -127,7 +126,7 @@
 
   function setAuto(on) {
     window.RSZ_AUTO = !!on;
-    try { window.localStorage.setItem(AUTO_KEY, on ? "1" : "0"); } catch (e) {}
+    savePrefs();
     if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
     if (on) {
       autoTimer = setInterval(function () {
@@ -159,6 +158,7 @@
       row.querySelector(".oinfo b").textContent = r.name || (RATIO_DISPLAY[r.ratio] || r.ratio);
       var sub = RATIO_DISPLAY[r.ratio] || r.ratio;
       if (ok && r.moved) { sub += " · đã canh " + r.moved + " lớp"; }
+      if (ok && r.bin) { sub += " · bin: " + r.bin; }
       if (!ok) {
         sub = "không tạo được";
         if (r.orphan) { sub += " — bản dở dang: " + r.orphan; }
@@ -218,7 +218,7 @@
 
   function setMode(mode) {
     window.RSZ_MODE = mode === "PIN" ? "PIN" : "GG";
-    try { window.localStorage.setItem(MODE_KEY, window.RSZ_MODE); } catch (e) {}
+    savePrefs();
     renderMode();
   }
 
@@ -236,17 +236,9 @@
     // Realtime detection is the poll (AUTO toggle, on by default); the focus
     // listener is a free extra kick when the user clicks into the panel.
     window.addEventListener("focus", function () { refreshSource(false); });
-    window.RSZ_AUTO = (function () {
-      try { return window.localStorage.getItem(AUTO_KEY) !== "0"; } catch (e) { return true; }
-    })();
+    renderMode();
     setAuto(window.RSZ_AUTO);
   };
-
-  window.initPanel();
-
-  var BG_TRACK_KEY = "rsz.bgTrack";
-  var GUIDE_KEY = "rsz.guideY";       // JSON {"9-16":..,"4-5":..,"1-1":..,"2-3":..}
-  var MODE_KEY = "rsz.mode";          // "GG" (Google) | "PIN" (Pinterest)
 
   function gnum(v, def) {
     v = parseFloat(v);
@@ -254,23 +246,63 @@
     return v < 0 ? 0 : (v > 1 ? 1 : v);
   }
 
-  window.RSZ_BG_TRACK = parseInt(window.localStorage.getItem(BG_TRACK_KEY) || "1", 10) || 1;
-  window.RSZ_GUIDE = (function () {
-    var d = { "9-16": 0.5, "4-5": 0.5, "1-1": 0.5, "2-3": 0.5 };
-    try {
-      var saved = JSON.parse(window.localStorage.getItem(GUIDE_KEY) || "{}");
-      d["9-16"] = gnum(saved["9-16"], 0.5);
-      d["4-5"] = gnum(saved["4-5"], 0.5);
-      d["1-1"] = gnum(saved["1-1"], 0.5);
-      d["2-3"] = gnum(saved["2-3"], 0.5);
-    } catch (e) {}
-    return d;
-  })();
-  window.RSZ_MODE = (function () {
-    try { return window.localStorage.getItem(MODE_KEY) === "PIN" ? "PIN" : "GG"; }
-    catch (e) { return "GG"; }
-  })();
-  renderMode(); // RSZ_MODE is set now; reflect it on the toggle + button
+  // Every setting lives in ONE persisted store (js/prefs.js writes it to a file
+  // outside the panel, so a single save applies to every project and survives
+  // Premiere restarts + panel updates).
+  var prefsReady = false;
+
+  function loadPrefs() {
+    var s = null;
+    try { s = window.RSZ_PREFS ? window.RSZ_PREFS.load() : null; } catch (e) {}
+    s = s || {};
+    var bg = parseInt(s.bgTrack, 10);
+    window.RSZ_BG_TRACK = (bg && bg > 0) ? bg : 1;
+    var g = s.guide || {};
+    window.RSZ_GUIDE = {
+      "9-16": gnum(g["9-16"], 0.5),
+      "4-5":  gnum(g["4-5"], 0.5),
+      "1-1":  gnum(g["1-1"], 0.5),
+      "2-3":  gnum(g["2-3"], 0.5)
+    };
+    window.RSZ_MODE = s.mode === "PIN" ? "PIN" : "GG";
+    window.RSZ_AUTO = s.auto !== false;   // default: on
+    prefsReady = true;
+  }
+
+  // Called on every change; the guard keeps a pre-load call from overwriting
+  // good settings with undefined.
+  function savePrefs() {
+    if (!prefsReady || !window.RSZ_PREFS) { return false; }
+    return window.RSZ_PREFS.save({
+      bgTrack: window.RSZ_BG_TRACK,
+      guide: window.RSZ_GUIDE,
+      mode: window.RSZ_MODE,
+      auto: !!window.RSZ_AUTO
+    });
+  }
+
+  // Boot: settings first (initPanel paints from them). Must run AFTER the
+  // declarations above — `var prefsReady = false` would otherwise re-run and
+  // silently disable every later save.
+  loadPrefs();
+  window.initPanel();
+
+  // Settings save silently on change; flash a confirmation so it's obvious the
+  // value is now stored for every project (no per-project re-entry).
+  var PREFS_NOTE_IDLE = "Cài đặt tự lưu 1 lần — dùng cho MỌI project.";
+  var noteTimer = null;
+
+  function noteSaved() {
+    var el = document.getElementById("prefs-note");
+    if (!el) { return; }
+    el.textContent = "✓ Đã lưu — áp dụng cho mọi project";
+    el.className = "hint shint saved";
+    if (noteTimer) { clearTimeout(noteTimer); }
+    noteTimer = setTimeout(function () {
+      el.textContent = PREFS_NOTE_IDLE;
+      el.className = "hint shint";
+    }, 2000);
+  }
 
   function showSettings(show) {
     var main = document.getElementById("main-view");
@@ -292,9 +324,7 @@
   var GZ_WIDTH = 92; // px; frame height = width * aspect
   var curRatio = "9-16";
 
-  function saveGuide() {
-    try { window.localStorage.setItem(GUIDE_KEY, JSON.stringify(window.RSZ_GUIDE)); } catch (e) {}
-  }
+  function saveGuide() { savePrefs(); noteSaved(); }
 
   function renderGuide() {
     var frame = document.getElementById("gzframe");
@@ -356,7 +386,8 @@
         if (v > 20) { v = 20; }
         window.RSZ_BG_TRACK = v;
         input.value = v;
-        window.localStorage.setItem(BG_TRACK_KEY, String(v));
+        savePrefs();
+        noteSaved();
       });
     }
 

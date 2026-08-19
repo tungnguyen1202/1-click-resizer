@@ -6,6 +6,9 @@
 // │   was index 0 — locate by name, do NOT hardcode the index)              │
 // │ Position property: displayName === "Position" ([x,y] normalized)        │
 // │ Scale property:    displayName === "Scale"    (percent; Uniform Scale on)│
+// │ BIN PLACEMENT: clone() drops the copy at the project ROOT — the panel     │
+// │   walks rootItem for the source's parent bin (by nodeId) and moves the new │
+// │   sequence there via projectItem.moveBin(bin).                             │
 // │ DUPLICATE_METHOD   = "clone"  // activeSequence.clone() is a function;   │
 // │   qe.duplicate() and createClone() are undefined. clone() does not       │
 // │   return the new sequence → diff app.project.sequences IDs to find it.   │
@@ -174,6 +177,57 @@ function RSZ_duplicateSequence(sourceSeq) {
   return null;
 }
 
+// ---- bin placement ---------------------------------------------------------
+
+// A ProjectItem is a bin when its type says so (ProjectItemType.BIN === 2 —
+// referenced numerically because the enum isn't always defined in this host).
+function RSZ_isBin(item) {
+  try { return item && item.type === 2; } catch (e) { return false; }
+}
+
+// The bin that directly contains `item`, or null when it sits at the project
+// root (or can't be located). Depth-first walk over rootItem's children —
+// matching on nodeId, the same identity the source resolver uses.
+function RSZ_findParentBin(item) {
+  if (!item) { return null; }
+  var targetId;
+  try { targetId = item.nodeId; } catch (e) { return null; }
+  if (!targetId) { return null; }
+
+  function walk(bin) {
+    var kids;
+    try { kids = bin.children; } catch (e) { return null; }
+    if (!kids) { return null; }
+    for (var i = 0; i < kids.numItems; i++) {
+      var child = kids[i];
+      try { if (child.nodeId === targetId) { return bin; } } catch (e1) {}
+      if (RSZ_isBin(child)) {
+        var hit = walk(child);
+        if (hit) { return hit; }
+      }
+    }
+    return null;
+  }
+
+  var root = app.project.rootItem;
+  var found = walk(root);
+  if (!found) { return null; }
+  try { if (found.nodeId === root.nodeId) { return null; } } catch (e2) {}
+  return found;   // a real bin, not the root
+}
+
+// Move a sequence's ProjectItem into `bin`. No-op (false) when there is no bin
+// to move into or the host lacks moveBin. Returns true only if it moved.
+function RSZ_moveSeqToBin(seq, bin) {
+  if (!seq || !bin) { return false; }
+  try {
+    var pi = seq.projectItem;
+    if (!pi || typeof pi.moveBin !== "function") { return false; }
+    pi.moveBin(bin);
+    return true;
+  } catch (e) { return false; }
+}
+
 // Sets the frame size and verifies it actually took effect (some hosts can
 // silently ignore setSettings fields). Returns false on mismatch so the caller
 // can report FRAME_SIZE_FAILED instead of pretending the resize happened.
@@ -256,9 +310,10 @@ function RSZ_layoutClips(dup, bgTrack, guideY) {
 }
 
 // Duplicate `sourceSeq`, reframe to `tgtRatio`, rename with the platform tag,
-// and lay out its clips. Returns a hand-built JSON result item (ExtendScript has
-// no JSON global). Isolated so one failing target never aborts the batch.
-function RSZ_makeVariant(sourceSeq, baseName, tgtRatio, platform, bgTrack, guideY) {
+// move it into `destBin` (the source's own bin; null = leave at root) and lay out
+// its clips. Returns a hand-built JSON result item (ExtendScript has no JSON
+// global). Isolated so one failing target never aborts the batch.
+function RSZ_makeVariant(sourceSeq, baseName, tgtRatio, platform, bgTrack, guideY, destBin) {
   var tgt = RSZ.RATIOS[tgtRatio];
   var dup = null; // visible in catch so a stranded duplicate can be reported
   try {
@@ -275,9 +330,12 @@ function RSZ_makeVariant(sourceSeq, baseName, tgtRatio, platform, bgTrack, guide
            + RSZ_esc(dup.name) + '"}';
     }
     dup.name = RSZ.buildName(baseName, tgtRatio, platform);
+    // clone() drops the copy at the project root — put it beside its source.
+    var binName = RSZ_moveSeqToBin(dup, destBin) ? String(destBin.name) : "";
     var moved = RSZ_layoutClips(dup, bgTrack, guideY);
     return '{"ratio":"' + tgtRatio + '","name":"' + RSZ_esc(dup.name)
-         + '","moved":' + moved + '}';
+         + '","moved":' + moved
+         + (binName ? ',"bin":"' + RSZ_esc(binName) + '"' : '') + '}';
   } catch (te) {
     return '{"ratio":"' + tgtRatio + '","error":"' + RSZ_esc(String(te)) + '"'
          + (dup ? ',"orphan":"' + RSZ_esc(dup.name) + '"' : '') + '}';
@@ -297,10 +355,13 @@ function RSZ_runResizeGG(bgTrack, guide9, guide45, guide11) {
     return '{"ok":false,"error":"UNKNOWN_RATIO","width":' + info.width + ',"height":' + info.height + '}';
   }
 
+  // Resolve the source's bin once — every variant lands in the same place.
+  var destBin = RSZ_findParentBin(info.seq.projectItem);
   var targets = RSZ.otherRatios(info.ratio);
   var parts = [];
   for (var t = 0; t < targets.length; t++) {
-    parts.push(RSZ_makeVariant(info.seq, info.name, targets[t], "GG", bgTrack, guideByRatio[targets[t]]));
+    parts.push(RSZ_makeVariant(info.seq, info.name, targets[t], "GG", bgTrack,
+                               guideByRatio[targets[t]], destBin));
   }
   RSZ_makeActive(info.seq);
   return '{"ok":true,"source":"' + info.ratio + '","from":"' + info.from
@@ -316,7 +377,8 @@ function RSZ_runResizePIN(bgTrack, guide23) {
   var info = RSZ_activeInfoObj();
   if (!info) { return '{"ok":false,"error":"NO_ACTIVE_SEQUENCE",' + RSZ_sourceDiag() + '}'; }
 
-  var item = RSZ_makeVariant(info.seq, info.name, "2-3", "PIN", bgTrack, guideY);
+  var destBin = RSZ_findParentBin(info.seq.projectItem);
+  var item = RSZ_makeVariant(info.seq, info.name, "2-3", "PIN", bgTrack, guideY, destBin);
   RSZ_makeActive(info.seq);
   return '{"ok":true,"source":' + (info.ratio ? ('"' + info.ratio + '"') : 'null')
        + ',"from":"' + info.from + '","results":[' + item + '],"error":null}';

@@ -30,6 +30,7 @@
 - **Duplicate** the active sequence (original untouched).
 - **Frame size** → target (1080-wide: 9:16 = 1080×1920, 4:5 = 1080×1350, 1:1 = 1080×1080); frame rate preserved.
 - **Rename** — swaps the trailing ratio label, e.g. `Clip 9x16` → `Clip 4x5`.
+- **Same bin** — new sequences land in the same bin as the source, not the project root.
 - **Background kept at its scale** — never over-scaled or cropped. Standard 9:16-source footage fills the 9:16 frame as-is; a non-matching background can be “Fill frame”-d by hand in one click.
 - **Text guide** — text/graphics/MOGRT snap to a per-ratio guide line you set (Settings); logos are left untouched for manual placement.
 - **Realtime** source detection (AUTO) and **in-panel auto-update** (a bar appears when a new version is out — one click to update).
@@ -63,6 +64,7 @@ Then quit Premiere fully (Cmd+Q), reopen → **Window → Extensions → 1-Click
 - **Duplicate** sequence đang mở (giữ nguyên bản gốc).
 - **Đổi khung** → ratio đích (rộng 1080: 9:16 = 1080×1920, 4:5 = 1080×1350, 1:1 = 1080×1080); giữ nguyên frame rate.
 - **Đổi tên** — thay nhãn ratio ở cuối, vd `Clip 9x16` → `Clip 4x5`.
+- **Cùng bin** — sequence mới nằm ngay trong bin của sequence gốc, không rơi ra ngoài cùng.
 - **Giữ nguyên scale nền** — không phóng lố, không cắt. Footage 9:16 gốc sẽ lấp đầy khung 9:16 y như cũ; nền khác tỉ lệ thì bạn tự "Fill frame" 1 click.
 - **Guide text** — text/graphic/MOGRT canh theo đường guide từng ratio (chỉnh trong Settings); logo giữ nguyên để canh tay.
 - **Nhận diện realtime** (AUTO) và **tự cập nhật trong panel** (có bản mới là hiện thanh báo — bấm một nút là xong).

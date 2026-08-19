@@ -25,6 +25,9 @@ sequences (e.g. from 9:16 → `… 4x5` and `… 1x1`):
   1080×1350, 1:1 = 1080×1080). Frame rate preserved.
 - **Rename**: original name, trailing ratio label swapped, new label appended
   with a space — `MyClip 9x16` → `MyClip 4x5`.
+- **Bin**: each new sequence is moved into the **same bin as its source**
+  (`clone()` drops copies at the project root, so the panel moves them back).
+  A source that already lives at the root stays at the root.
 - **Background** (clips on the background track, default V1): **scale left
   untouched** — the panel API can't read a clip's native size, so auto-scaling
   would guess from the sequence ratio and over-scale. Standard 9:16-source
@@ -64,8 +67,8 @@ then offers the update on next open.
 
 - **Track nền (V…)** — which video track is the background (default 1 = V1).
 - **Text position (guide per ratio)** — a visual editor: switch the 9:16 / 4:5 /
-  1:1 tab (the preview reshapes to that ratio) and drag the green line to set
-  where text/graphics/MOGRT sit vertically for that ratio (default centre).
+  1:1 / 2:3 tab (the preview reshapes to that ratio) and drag the green line to
+  set where text/graphics/MOGRT sit vertically for that ratio (default centre).
   Their scale is never changed; horizontal position is kept.
 - Logos (name contains `logo`, `fav`, …) are **left untouched** — position them
   by hand after the resize; no setting needed.
@@ -73,6 +76,14 @@ then offers the update on next open.
   ~every 0.3s and updates the source info the moment you switch sequences.
   Click it to toggle off (persisted); the **⟳ Refresh** button always works
   as the manual path.
+
+**Settings are saved once, for every project.** They are written to
+`~/Library/Application Support/1-Click Resizer Settings/settings.json` — a file
+outside the panel's own folder, so it survives Premiere restarts, project
+switches and panel updates. (A CEP panel runs from `file://`, where
+`localStorage` lives in a cache the host may clear; that is why settings used to
+look like they reset. localStorage is still written as a mirror/fallback.)
+Settings from older versions are migrated automatically on first run.
 
 ## Install (macOS) — for teammates
 
@@ -174,6 +185,7 @@ com.oneclickresize.panel/
   css/style.css         dark neon theme
   js/CSInterface.js     Adobe bridge (vendored)
   js/main.js            panel controller (no business logic)
+  js/prefs.js           settings store (JSON file outside the panel; one save, all projects)
   js/updater.js         in-panel auto-update (git fetch/pull; needs clone+symlink install)
   jsx/resize-core.jsx   pure logic (ratio, naming, fillScale, isLogoName) — Node-tested
   jsx/premiere.jsx      Premiere DOM layer (#includes resize-core)
