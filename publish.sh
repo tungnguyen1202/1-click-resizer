@@ -102,3 +102,29 @@ if command -v gh >/dev/null 2>&1; then
 else
   echo "⚠️  gh CLI not found — code pushed, but the Releases page was NOT updated."
 fi
+
+# --- Mirror to the maintainer's other GitHub account -------------------------------
+# Every release goes to BOTH accounts. `origin` (tungnguyen1202/1-click-resizer,
+# public) is what teammates' panels auto-update from, so it is pushed first and is
+# what gates the release; the remotes below are then brought to the same commits
+# and tags. Runs last and fail-soft: a mirror that is unreachable never blocks or
+# undoes the real release. Edit MIRRORS to change the set.
+MIRRORS="personal"
+
+git fetch origin --tags --quiet 2>/dev/null || true   # pick up the tag gh just created
+for m in $MIRRORS; do
+  if ! git remote get-url "$m" >/dev/null 2>&1; then
+    echo "⚠️  Remote '$m' is not configured — mirror skipped. Add it with:"
+    echo "    git remote add $m <url>"
+    continue
+  fi
+  murl=$(git remote get-url "$m")
+  echo "→ Mirroring v$new to '$m' ($murl) …"
+  if git push "$m" main --quiet && git push "$m" --tags --quiet; then
+    echo "✅ Mirrored to '$m'."
+  else
+    echo "⚠️  Could not push to '$m' — v$new IS live on origin, only the mirror lagged."
+    echo "    Most likely cause: no write access for the logged-in GitHub account."
+    echo "    Retry after fixing access with:  git push $m main && git push $m --tags"
+  fi
+done
